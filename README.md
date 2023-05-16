@@ -1,22 +1,20 @@
-# Snorkel Flow
+## Snorkel Flow
 
 Snorkel Flow is a data-centric AI platform for automated data labeling, integrated model training and analysis, and enhanced domain expert collaboration
 
 For more information, visit our [official website](snorkel.ai)
 
 ## Architecture
-(Diagram)
+![deployment](https://github.com/snorkel-ai/snorkel-flow-gcp-marketplace/assets/32317817/df430c33-089d-49e1-8b8d-b90991c5c071)
 
-# Installation
+## Installation
 
 ## Quick install with Google Cloud Marketplace
 
 Get up and running with a few clicks! Install Snorkel Flow on your Google Kubernetes Enginer cluster using Google Cloud Marketplace. Follow the [on-screen instructions](TODO:Add Listing).
 
 ## Command line instructions
-### Prerequisites
-
-#### Set up command-line tools
+### Set up command-line tools
 
 You'll need the following tools in your development environment. If you are
 using Cloud Shell, `gcloud`, `kubectl`, Docker, and Git are installed in your
@@ -62,7 +60,7 @@ gcloud container clusters update "$CLUSTER" \
    --zone "$ZONE"
 ```
 
-#### Install the Application resource definition
+### Install the Application resource definition
 
 An Application resource is a collection of individual Kubernetes components,
 such as Services, Deployments, and so on, that you can manage as a group.
@@ -81,7 +79,7 @@ The Application resource is defined by the
 community. The source code can be found on
 [github.com/kubernetes-sigs/application](https://github.com/kubernetes-sigs/application).
 
-#### Clone this repo
+### Clone this repo
 
 Clone this repo and the associated tools repo.
 
@@ -96,7 +94,7 @@ Navigate to the `chart/snorkelflow` directory:
 cd chart/snorkelflow
 ```
 
-#### Configure the app with environment variables
+### Configure the app with environment variables
 
 Choose an instance name and
 [namespace](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/)
@@ -107,19 +105,7 @@ export APP_INSTANCE_NAME=snorkel-flow
 export NAMESPACE=snorkelflow
 ```
 
-Enable Stackdriver Metrics Exporter:
-
-> **NOTE:** Your GCP project must have Stackdriver enabled. If you are using a
-> non-GCP cluster, you cannot export metrics to Stackdriver.
-
-By default, the application does not export metrics to Stackdriver. To enable
-this option, change the value to `true`.
-
-```shell
-export METRICS_EXPORTER_ENABLED=false
-```
-
-#### Create namespace in your Kubernetes cluster
+### Create namespace in your Kubernetes cluster
 
 If you use a different namespace than `snorkelflow`, run the command below to create
 a new namespace:
@@ -128,7 +114,7 @@ a new namespace:
 kubectl create namespace "$NAMESPACE"
 ```
 
-#### Expand the manifest template
+### Install the Helm Charts
 
 Use `helm install` to install from helm charts.
 Navigate to the helm chart directory
@@ -139,7 +125,7 @@ cd chart/snorkelflow
 helm install --values ./values.yaml ./ --generate-name
 ```
 
-#### View the app in the Google Cloud Console
+### View the app in the Google Cloud Console
 
 To get the Console URL for your app, run the following command:
 
@@ -149,24 +135,24 @@ echo "https://console.cloud.google.com/kubernetes/application/${ZONE}/${CLUSTER}
 
 To view your app, open the URL in your browser.
 
-# Access Snorkel Flow
+## Access Snorkel Flow
 
 Snorkel Flow can be accessed 
 
-# Scaling
+## Scaling
 This installation of Snorkel Flow is not meant to be scaled up.
 
-# Upgrading the app
+## Upgrading the app
+This installation of Snorkel Flow is not meant to be upgraded.
 
-# Uninstalling the Application
-
-## Using the Google Cloud Platform Console
+## Uninstalling the Application
+### Using the Google Cloud Platform Console
 
 In the GCP Console, open [Kubernetes Applications](https://console.cloud.google.com/kubernetes/application).
 From the list of applications, click **Snorkel Flow**.
 On the Application Details page, click **Delete**.
 
-## Using the command line
+### Using the command line
 ### Delete the resources
 
 > **NOTE:** We recommend that you use a `kubectl` version that is the same as
