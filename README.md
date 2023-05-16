@@ -116,14 +116,33 @@ kubectl create namespace "$NAMESPACE"
 
 ### Install the Helm Charts
 
-Use `helm install` to install from helm charts.
-Navigate to the helm chart directory
+Use `helm install` to install Snorkel Flow from the helm charts.
+Note that you will need to insert the correct image paths in the `values.yaml`
+file, or set them on the command line as shown here.
 
 ```shell
 cd chart/snorkelflow
 
-helm install --values ./values.yaml ./ --generate-name
+helm install --generate-name \
+  --set image.imageNames.postgres="gcr.io/snorkelai-public/snorkelflow/postgres:0.76.11" \
+  --set image.imageNames.engine="gcr.io/snorkelai-public/snorkelflow/engine:0.76.11" \
+  --set image.imageNames.envoy="gcr.io/snorkelai-public/snorkelflow/envoy:0.76.11" \
+  --set image.imageNames.flowUi="gcr.io/snorkelai-public/snorkelflow/flow-ui:0.76.11" \
+  --set image.imageNames.grafana="gcr.io/snorkelai-public/snorkelflow/grafana:0.76.11" \
+  --set image.imageNames.influxdb="gcr.io/snorkelai-public/snorkelflow/influxdb:0.76.11" \
+  --set image.imageNames.minio="gcr.io/snorkelai-public/snorkelflow/minio:0.76.11" \
+  --set image.imageNames.modelRegistry="gcr.io/snorkelai-public/snorkelflow/model-registry:0.76.11" \
+  --set image.imageNames.notebook="gcr.io/snorkelai-public/snorkelflow/notebook:0.76.11" \
+  --set image.imageNames.redis="gcr.io/snorkelai-public/snorkelflow/redis:0.76.11" \
+  --set image.imageNames.secretsGenerator="gcr.io/snorkelai-public/snorkelflow/secrets-generator:0.76.11" \
+  --set image.imageNames.singleuserNotebook="gcr.io/snorkelai-public/snorkelflow/singleuser-notebook:0.76.11" \
+  --set image.imageNames.studio="gcr.io/snorkelai-public/snorkelflow/studio-api:0.76.11" \
+  --set image.imageNames.telegraf="gcr.io/snorkelai-public/snorkelflow/telegraf:0.76.11" \
+  --set image.imageNames.tdm="gcr.io/snorkelai-public/snorkelflow/tdm-api:0.76.11" \
+  ./ 
 ```
+
+The image version here is just provided as a sample.
 
 ### View the app in the Google Cloud Console
 
@@ -163,6 +182,12 @@ On the Application Details page, click **Delete**.
 kubectl delete daemonset,service,configmap,application \
   --namespace ${NAMESPACE} \
   --selector app.kubernetes.io/name=${APP_INSTANCE_NAME}
+```
+
+Alternatively, if the namespace is no longer required, you can delete the namespace itself
+
+```shell
+kubectl delete namespace ${NAMESPACE}
 ```
 
 ### Delete the GKE cluster
