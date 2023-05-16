@@ -1,6 +1,6 @@
 # Snorkel Flow
 
-Snorkel Flow is a data-centric AI platform for automated data labeling, integrated model training and analysis, and enhanced domain expert collaboration
+Snorkel Flow is the data-centric AI platform for automated data labeling, integrated model training and analysis, and enhanced domain expert collaboration
 
 For more information, visit our [official website](snorkel.ai)
 
@@ -98,7 +98,7 @@ cd chart/snorkelflow
 
 Choose an instance name and
 [namespace](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/)
-for the app. In most cases, you can use the `default` namespace.
+for the app. In most cases, you can use the `snorkelflow` namespace.
 
 ```shell
 export APP_INSTANCE_NAME=snorkel-flow
@@ -107,8 +107,7 @@ export NAMESPACE=snorkelflow
 
 ### Create namespace in your Kubernetes cluster
 
-If you use a different namespace than `snorkelflow`, run the command below to create
-a new namespace:
+If you use a different namespace than `snorkelflow`, run the command below to create a new namespace:
 
 ```shell
 kubectl create namespace "$NAMESPACE"
@@ -142,7 +141,7 @@ helm install --generate-name \
   ./ 
 ```
 
-The image version here is just provided as a sample.
+The image versions here are just provided as a sample.
 
 ### View the app in the Google Cloud Console
 
@@ -156,7 +155,28 @@ To view your app, open the URL in your browser.
 
 # Access Snorkel Flow
 
-Snorkel Flow can be accessed 
+To access the Snorkel Flow UI, you can either expose a public service endpoint or keep it private, but connect
+from your local environment with `kubectl port-forward`.
+
+## Forward Snorkel Flow port in local environment
+
+You can use port forwarding feature of `kubectl` to forward Snorkel Flow's port to your local machine. Run the following command in background:
+
+```shell
+kubectl get pods --namespace {{ .Release.Namespace }}
+```
+
+Find the `flow-ui` pod, and then execute the following command:
+
+```shell
+kubectl port-forward --namespace {{ .Release.Namespace }} flow-ui-{pod name} 5000
+```
+Replace the exact name of the `flow-ui` pod with the actual name of the pod listed.
+
+Now you can access Snorkel Flow with `http://localhost:5000/`.
+
+## Login to Snorkel Flow
+Upload the license provided to you and follow the instructions on screen to create user accounts.
 
 # Scaling
 This installation of Snorkel Flow is not meant to be scaled up.
