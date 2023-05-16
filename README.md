@@ -1,13 +1,13 @@
-## Snorkel Flow
+# Snorkel Flow
 
 Snorkel Flow is a data-centric AI platform for automated data labeling, integrated model training and analysis, and enhanced domain expert collaboration
 
 For more information, visit our [official website](snorkel.ai)
 
-## Architecture
+# Architecture
 ![deployment](https://github.com/snorkel-ai/snorkel-flow-gcp-marketplace/assets/32317817/df430c33-089d-49e1-8b8d-b90991c5c071)
 
-## Installation
+# Installation
 
 ## Quick install with Google Cloud Marketplace
 
@@ -135,24 +135,24 @@ echo "https://console.cloud.google.com/kubernetes/application/${ZONE}/${CLUSTER}
 
 To view your app, open the URL in your browser.
 
-## Access Snorkel Flow
+# Access Snorkel Flow
 
 Snorkel Flow can be accessed 
 
-## Scaling
+# Scaling
 This installation of Snorkel Flow is not meant to be scaled up.
 
-## Upgrading the app
+# Upgrading the app
 This installation of Snorkel Flow is not meant to be upgraded.
 
-## Uninstalling the Application
-### Using the Google Cloud Platform Console
+# Uninstalling the Application
+## Using the Google Cloud Platform Console
 
 In the GCP Console, open [Kubernetes Applications](https://console.cloud.google.com/kubernetes/application).
 From the list of applications, click **Snorkel Flow**.
 On the Application Details page, click **Delete**.
 
-### Using the command line
+## Using the command line
 ### Delete the resources
 
 > **NOTE:** We recommend that you use a `kubectl` version that is the same as
