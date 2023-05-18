@@ -1,0 +1,49 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    service: envoy-front-proxy
+    project: {{ .Values.namespace }}
+  name: envoy-front-proxy
+  namespace: {{ .Values.namespace }}
+{{- if eq .Values.traffic.ingresses.cloudProvider "gcp" }}
+  annotations:
+    cloud.google.com/backend-config: '{"ports": {"1080":"envoy-front-proxy-backend-config"}}'
+{{- end }}
+spec:
+  type: {{ .Values.traffic.ingresses.serviceType }}
+  ports:
+  - name: "18686"
+    port: 18686
+    targetPort: 18686
+  - name: "18484"
+    port: 18484
+    targetPort: 18484
+  - name: "18888"
+    port: 18888
+    targetPort: 18888
+  - name: "18989"
+    port: 18989
+    targetPort: 18989
+  - name: "18990"
+    port: 18990
+    targetPort: 18990
+  - name: "30000"
+    port: 30000
+    targetPort: 30000
+{{- if .Values.services.jupyterhub.enabled }}
+  - name: "18000"
+    port: 18000
+    targetPort: 18000
+{{- end }}
+  - name: "1443"
+    port: 1443
+    targetPort: 1443
+  - name: "1080"
+    port: 1080
+    targetPort: 1080
+  - name: "9901"
+    port: 9901
+    targetPort: 9901
+  selector:
+    service: envoy-front-proxy

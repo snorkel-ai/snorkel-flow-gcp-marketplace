@@ -1,0 +1,214 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: telegraf-network-policy
+  namespace: {{ .Values.namespace }}
+spec:
+  egress:
+  - ports:
+      - port: 53
+        protocol: UDP
+      - port: 53
+        protocol: TCP
+    to: []
+{{- if .Values.traffic.allowInternetAccess}}
+  - to:
+    - ipBlock:
+        cidr: 0.0.0.0/0
+        except:
+        - 192.168.0.0/16
+        - 172.16.0.0/20
+{{- end }}
+  - ports:
+      - port: 5432
+    to:
+      - podSelector:
+          matchLabels:
+            project: {{ .Values.namespace }}
+            service: db
+  - ports:
+      - port: 6379
+    to:
+      - podSelector:
+          matchLabels:
+            project: {{ .Values.namespace }}
+            service: redis
+  - ports:
+      - port: 8686
+    to:
+      - podSelector:
+          matchLabels:
+            project: {{ .Values.namespace }}
+            service: tdm-api
+  - ports:
+      - port: 9901
+    to:
+      - podSelector:
+          matchLabels:
+            project: snorkelflow
+            service: envoy-front-proxy
+  - ports:
+      - port: 8086
+    to:
+      - podSelector:
+          matchLabels:
+            project: {{ .Values.namespace }}
+            service: influxdb
+  ingress:
+  - from:
+      - podSelector:
+          matchLabels:
+            project: {{ .Values.namespace }}
+            service: flow-ui
+    ports:
+      - port: 8186
+      - port: 8125
+        protocol: UDP
+  - from:
+      - podSelector:
+          matchLabels:
+            project: {{ .Values.namespace }}
+            service: tdm-api
+    ports:
+      - port: 8186
+      - port: 8125
+        protocol: UDP
+  - from:
+      - podSelector:
+          matchLabels:
+            project: {{ .Values.namespace }}
+            service: studio-api
+    ports:
+      - port: 8186
+      - port: 8125
+        protocol: UDP
+  - from:
+      - podSelector:
+          matchLabels:
+            project: {{ .Values.namespace }}
+            service: engine
+    ports:
+      - port: 8186
+      - port: 8125
+        protocol: UDP
+  - from:
+      - podSelector:
+          matchLabels:
+            project: {{ .Values.namespace }}
+            service: engine-tiny
+    ports:
+      - port: 8186
+      - port: 8125
+        protocol: UDP
+  - from:
+      - podSelector:
+          matchLabels:
+            project: {{ .Values.namespace }}
+            service: model-trainer
+    ports:
+      - port: 8186
+      - port: 8125
+        protocol: UDP
+  - from:
+      - podSelector:
+          matchLabels:
+            project: {{ .Values.namespace }}
+            service: notebook
+    ports:
+      - port: 8186
+      - port: 8125
+        protocol: UDP
+  - from:
+      - podSelector:
+          matchLabels:
+            project: {{ .Values.namespace }}
+            service: redis
+    ports:
+      - port: 8186
+  - from:
+      - podSelector:
+          matchLabels:
+            project: {{ .Values.namespace }}
+            service: db
+    ports:
+      - port: 8186
+  - from:
+      - podSelector:
+          matchLabels:
+            project: {{ .Values.namespace }}
+            service: minio
+    ports:
+      - port: 8186
+  - from:
+      - podSelector:
+          matchLabels:
+            project: {{ .Values.namespace }}
+            service: envoy-front-proxy
+    ports:
+      - port: 8186
+  - from:
+      - podSelector:
+          matchLabels:
+            project: {{ .Values.namespace }}
+            service: ray-head
+    ports:
+      - port: 8186
+      - port: 8125
+        protocol: UDP
+  - from:
+      - podSelector:
+          matchLabels:
+            project: {{ .Values.namespace }}
+            service: ray-worker
+    ports:
+      - port: 8186
+      - port: 8125
+        protocol: UDP
+  - from:
+      - podSelector:
+          matchLabels:
+            project: {{ .Values.namespace }}
+            service: studio-ray-worker
+    ports:
+      - port: 8186
+      - port: 8125
+        protocol: UDP
+  - from:
+      - podSelector:
+          matchLabels:
+            project: {{ .Values.namespace }}
+            service: studio-ray-head
+    ports:
+      - port: 8186
+      - port: 8125
+        protocol: UDP
+{{- if .Values.services.jupyterhub.enabled }}
+  - from:
+      - podSelector:
+          matchLabels:
+            project: {{ .Values.namespace }}
+            service: jupyterhub
+    ports:
+      - port: 8186
+{{- end }}
+  - from:
+      - podSelector:
+          matchLabels:
+            project: {{ .Values.namespace }}
+            service: influxdb
+    ports:
+      - port: 8186
+  - from:
+      - podSelector:
+          matchLabels:
+            project: {{ .Values.namespace }}
+            service: grafana
+    ports:
+      - port: 8186
+  podSelector:
+    matchLabels:
+      project: {{ .Values.namespace }}
+      service: telegraf
+  policyTypes:
+    - Ingress
+    - Egress

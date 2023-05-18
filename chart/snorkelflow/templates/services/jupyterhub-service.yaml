@@ -1,0 +1,18 @@
+{{- if .Values.services.jupyterhub.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    project: {{ .Values.namespace }}
+    service: jupyterhub
+  name: jupyterhub
+  namespace: {{ .Values.namespace }}
+spec:
+  ports:
+  - name: '8081'
+    port: 8081
+    targetPort: 8081
+  selector:
+    service: jupyterhub
+  type: {{ .Values.traffic.ingresses.serviceType }}
+{{- end }}

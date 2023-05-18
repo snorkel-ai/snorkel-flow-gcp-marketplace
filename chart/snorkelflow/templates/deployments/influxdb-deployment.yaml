@@ -1,0 +1,102 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    always-pinned: "0"
+    service: influxdb
+    project: {{ .Values.namespace }}
+    snorkel.ai/compute-type: cpu
+  name: influxdb
+  namespace: {{ .Values.namespace }}
+spec:
+  strategy:
+    type: Recreate
+  replicas: 1
+  selector:
+    matchLabels:
+      service: influxdb
+      project: {{ .Values.namespace }}
+  template:
+    metadata:
+      labels:
+        always-pinned: "0"
+        service: influxdb
+        project: {{ .Values.namespace }}
+        snorkel.ai/compute-type: cpu
+    spec:
+{{- if .Values.affinity.binPackAlwaysPinnedPods }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: always-pinned
+                operator: In
+                values:
+                - "1"
+            topologyKey: kubernetes.io/hostname
+            namespaceSelector: {}
+{{- end }}
+      imagePullSecrets:
+        - name: regcred
+      securityContext:
+        fsGroup: 99
+        runAsUser: 99
+      containers:
+      - env:
+        - name: SERVICE_TYPE
+          value: influxdb
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: TELEGRAF_CADVISOR_URL
+          value: telegraf:8186
+        {{- if .Values.image.imageNames.influxdb }}
+        image: {{ .Values.image.imageNames.influxdb }}
+        {{- else }}
+        image: snorkelai/influxdb:2.2.0k
+        {{- end }}
+        name: influxdb
+        args:
+          - influxd
+          - --reporting-disabled
+          - --bolt-path=/var/opt/.influxdbv2/influxd.bolt
+          - --engine-path=/var/opt/.influxdbv2/engine
+        ports:
+          - containerPort: 8086
+        volumeMounts:
+        - mountPath: /var/opt/.influxdbv2
+          name: influxdb
+        resources:
+          requests:
+            memory: 4.0Gi
+            cpu: "2.0"
+          limits:
+            memory: 4.0Gi
+            cpu: "2.0"
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8086
+          initialDelaySeconds: 3
+          periodSeconds: 30
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 8086
+          periodSeconds: 30
+          failureThreshold: 120
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8086
+          periodSeconds: 30
+      volumes:
+      - name: influxdb
+        persistentVolumeClaim:
+          claimName: {{ .Values.namespace }}-influxdb

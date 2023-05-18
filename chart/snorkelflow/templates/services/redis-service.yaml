@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    service: redis
+    project: {{ .Values.namespace }}
+  name: redis
+  namespace: {{ .Values.namespace }}
+spec:
+  type: ClusterIP
+  ports:
+  - name: "6379"
+    port: 6379
+    targetPort: 6379
+  selector:
+    service: redis

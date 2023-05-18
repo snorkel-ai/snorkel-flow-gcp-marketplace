@@ -1,0 +1,31 @@
+{{- if and .Values.traffic.ingresses.services.tdm.enabled (not .Values.traffic.istio.enabled) }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Values.namespace }}-tdm-api-ingress
+  namespace: {{ .Values.namespace }}
+{{- if or .Values.traffic.ingresses.annotations .Values.traffic.ingresses.services.tdm.annotations }}
+  annotations:
+{{ toYaml (merge .Values.traffic.ingresses.services.tdm.annotations .Values.traffic.ingresses.annotations) | indent 4 }}
+{{- end }}
+spec:
+{{- if .Values.traffic.ingresses.ingressClassName }}
+  ingressClassName: {{ .Values.traffic.ingresses.ingressClassName }}
+{{- end }}
+{{- if .Values.traffic.ingresses.tlsHosts }}
+  tls:
+  - hosts:
+      - {{ .Values.traffic.ingresses.services.tdm.urlPrefix }}.{{ .Values.traffic.ingresses.domain }}
+{{- end }}
+  rules:
+  - host: {{ .Values.traffic.ingresses.services.tdm.urlPrefix }}.{{ .Values.traffic.ingresses.domain }}
+    http:
+      paths:
+      - backend:
+          service:
+            name: tdm-api
+            port:
+              number: 8686
+        path: /
+        pathType: Prefix
+{{- end }}

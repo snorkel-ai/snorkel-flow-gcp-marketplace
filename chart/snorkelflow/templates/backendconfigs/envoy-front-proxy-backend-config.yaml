@@ -1,0 +1,13 @@
+{{- if eq .Values.traffic.ingresses.cloudProvider "gcp" }}
+apiVersion: cloud.google.com/v1
+kind: BackendConfig
+metadata:
+  namespace: {{ .Values.namespace }}
+  name: envoy-front-proxy-backend-config
+spec:
+  healthCheck:
+    checkIntervalSec: 15
+    port: 1080
+    type: HTTP
+    requestPath: /api/version
+{{- end }}

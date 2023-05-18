@@ -1,0 +1,167 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    always-pinned: "0"
+    service: notebook
+    project: {{ .Values.namespace }}
+    {{- if .Values.gpu.enabled }}
+    snorkel.ai/compute-type: gpu
+    {{- else }}
+    snorkel.ai/compute-type: cpu
+    {{- end }}
+  name: notebook
+  namespace: {{ .Values.namespace }}
+spec:
+  strategy:
+    type: Recreate
+  replicas: 1
+  selector:
+    matchLabels:
+      service: notebook
+      project: {{ .Values.namespace }}
+  template:
+    metadata:
+      labels:
+        always-pinned: "0"
+        service: notebook
+        project: {{ .Values.namespace }}
+        {{- if .Values.gpu.enabled }}
+        snorkel.ai/compute-type: gpu
+        {{- else }}
+        snorkel.ai/compute-type: cpu
+        {{- end }}
+    spec:
+{{- if .Values.affinity.binPackAlwaysPinnedPods }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: always-pinned
+                operator: In
+                values:
+                - "1"
+            topologyKey: kubernetes.io/hostname
+            namespaceSelector: {}
+{{- end }}
+      imagePullSecrets:
+        - name: regcred
+      securityContext:
+        runAsUser: 99
+        fsGroup: 99
+      {{- if .Values.gpu.enabled }}
+      {{- if .Values.gpu.gpu_config.node_selectors }}
+      nodeSelector:
+        {{- range $key, $value := .Values.gpu.gpu_config.node_selectors }}
+        {{ $key }}: "{{ $value }}"
+        {{- end }}
+      {{- end }}
+      {{- if .Values.gpu.gpu_config.tolerations }}
+      tolerations:
+      {{- range .Values.gpu.gpu_config.tolerations }}
+      - effect: {{ .effect }}
+        key: {{ .key }}
+        operator: {{ .operator }}
+        value: {{ .value | quote }}
+      {{- end }}
+    {{- end }}
+    {{- end }}
+      containers:
+      - env:
+        - name: SERVICE_TYPE
+          value: notebook
+        - name: IS_GPU_ENABLED
+          value: "1"
+        - name: TORNADO_HOST_IP
+          value: {{ .Values.traffic.ingresses.services.snorkelflow.urlPrefix }}.{{ .Values.traffic.ingresses.domain }}
+        - name: USE_ASYNC_JUPYTER_KERNEL_MANAGER
+          value: "0"
+        - name: NOTEBOOK_IP
+          value: {{ .Values.traffic.ingresses.services.snorkelflow.urlPrefix }}-notebook.{{ .Values.traffic.ingresses.domain }}
+        - name: NOTEBOOK_PORT
+          value: "80"
+        - name: NOTEBOOK_TLS_PORT
+          value: "443"
+        - name: NOTEBOOK_BASE_URL
+          value: /notebook/
+        - name: SNORKELFLOW_API_KEY
+          value: dummy-key
+        - name: HOME
+{{- if .Values.services.jupyterhub.enabled }}
+          value: /data
+{{- else }}
+          value: /data/.snorkel-flow-notebooks
+{{- end }}
+        - name: SSO_HOST_IP
+          value: {{ .Values.traffic.ingresses.services.snorkelflow.urlPrefix }}.{{ .Values.traffic.ingresses.domain }}
+        - name: SNORKELFLOW_MOUNT_DIR
+          value: /data
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: TDM_API_URL
+          value: http://tdm-api:8686
+        - name: MINIO_URL
+          value: http://minio:9001
+        - name: STUDIO_API_URL
+          value: http://studio-api:8484
+        - name: TELEGRAF_CADVISOR_URL
+          value: telegraf:8186
+        - name: TELEGRAF_URL
+          value: http://telegraf:8125
+        - name: MINIO_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: minio-secret
+              key: minio_access_key
+        - name: MINIO_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: minio-secret
+              key: minio_secret_key
+        {{- if .Values.image.imageNames.notebook }}
+        image: {{ .Values.image.imageNames.notebook }}
+        {{- else if .Values.gpu.enabled }}
+        image: snorkelai/notebook:{{ .Values.version }}-cuda
+        {{- else }}
+        image: snorkelai/notebook:{{ .Values.version }}
+        {{- end }}
+        name: notebook
+        args:
+        - notebook
+        - --host
+        - 0.0.0.0
+        ports:
+        - containerPort: 8888
+        - containerPort: 8282
+        volumeMounts:
+        - mountPath: /data
+          name: data
+        - mountPath: /etc/auth/jwt
+          name: jwt-key-pub
+        resources:
+          requests:
+            memory: 32.0Gi
+            cpu: "8.0"
+            {{- if .Values.gpu.enabled }}
+            nvidia.com/gpu: '1'
+            {{- end }}
+          limits:
+            memory: 32.0Gi
+            cpu: "8.0"
+            {{- if .Values.gpu.enabled }}
+            nvidia.com/gpu: '1'
+            {{- end }}
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: {{ .Values.namespace }}-data
+      - name: jwt-key-pub
+        secret:
+          secretName: jwt-key-pub

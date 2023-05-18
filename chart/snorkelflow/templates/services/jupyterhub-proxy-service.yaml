@@ -1,0 +1,21 @@
+{{- if .Values.services.jupyterhub.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    project: {{ .Values.namespace }}
+    service: jupyterhub-proxy
+  name: jupyterhub-proxy
+  namespace: {{ .Values.namespace }}
+spec:
+  ports:
+  - name: '8000'
+    port: 8000
+    targetPort: 8000
+  - name: '8001'
+    port: 8001
+    targetPort: 8001
+  selector:
+    service: jupyterhub-proxy
+  type: {{ .Values.traffic.ingresses.serviceType }}
+{{- end }}

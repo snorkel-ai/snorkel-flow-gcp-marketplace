@@ -1,0 +1,158 @@
+{{- if .Values.services.jupyterhub.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    hub.jupyter.org/network-access-proxy-api: 'true'
+    hub.jupyter.org/network-access-proxy-http: 'true'
+    hub.jupyter.org/network-access-singleuser: 'true'
+    always-pinned: "0"
+    project: {{ .Values.namespace }}
+    service: jupyterhub
+    snorkel.ai/compute-type: cpu
+  name: jupyterhub
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      hub.jupyter.org/network-access-proxy-api: 'true'
+      hub.jupyter.org/network-access-proxy-http: 'true'
+      hub.jupyter.org/network-access-singleuser: 'true'
+      project: {{ .Values.namespace }}
+      service: jupyterhub
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        hub.jupyter.org/network-access-proxy-api: 'true'
+        hub.jupyter.org/network-access-proxy-http: 'true'
+        hub.jupyter.org/network-access-singleuser: 'true'
+        always-pinned: "0"
+        project: {{ .Values.namespace }}
+        service: jupyterhub
+        snorkel.ai/compute-type: cpu
+    spec:
+{{- if .Values.affinity.binPackAlwaysPinnedPods }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: always-pinned
+                operator: In
+                values:
+                - "1"
+            topologyKey: kubernetes.io/hostname
+            namespaceSelector: {}
+{{- end }}
+      containers:
+      - args:
+        - jupyterhub
+        - --config
+        - /usr/local/etc/jupyterhub/jupyterhubconfig.py
+        - --upgrade-db
+        env:
+        - name: SERVICE_TYPE
+          value: jupyterhub
+        - name: SNORKELFLOW_VERSION
+          value: "{{ .Values.version }}"
+        - name: POD_NAMESPACE
+          value: {{ .Values.namespace }}
+        - name: SSO_HOST_IP
+          value: {{ .Values.traffic.ingresses.services.snorkelflow.urlPrefix }}.{{ .Values.traffic.ingresses.domain }}
+        - name: SNORKELFLOW_MOUNT_DIR
+          value: /data
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: TDM_API_URL
+          value: http://tdm-api:8686
+        - name: JUPYTERHUB_URL
+          value: http://jupyterhub-proxy:8001
+        - name: MINIO_URL
+          value: http://minio:9001
+        - name: STUDIO_API_URL
+          value: http://studio-api:8484
+        - name: TELEGRAF_CADVISOR_URL
+          value: telegraf:8186
+        - name: MINIO_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              key: minio_access_key
+              name: minio-secret
+        - name: MINIO_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              key: minio_secret_key
+              name: minio-secret
+        - name: CONFIGPROXY_AUTH_TOKEN
+          valueFrom:
+            secretKeyRef:
+              key: hub.config.ConfigurableHTTPProxy.auth_token
+              name: jupyterhub-secret-secret
+        - name: OAUTH_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              key: client_secret
+              name: jupyterhub-oidc-secret
+        {{- if .Values.image.imageNames.jupyterhub }}
+        image: {{ .Values.image.imageNames.jupyterhub }}
+        {{- else }}
+        image: snorkelai/jupyterhub:1.2.0j
+        {{- end }}
+        name: jupyterhub
+        ports:
+        - containerPort: 8081
+        resources:
+          requests:
+            memory: 16.0Gi
+            cpu: "2.0"
+          limits:
+            memory: 16.0Gi
+            cpu: "2.0"
+        volumeMounts:
+        - mountPath: /data
+          name: data
+        - mountPath: /etc/auth/jwt
+          name: jwt-key-pub
+        - mountPath: /srv/jupyterhub
+          name: jupyterhub
+        - mountPath: /usr/local/etc/jupyterhub
+          name: jupyterhub-jupyterhubconfig-py-volume
+        - mountPath: /usr/local/etc/jupyterhub/config
+          name: jupyterhub-jupyterhubconfig-py-volume
+        - mountPath: /usr/local/etc/jupyterhub/secret
+          name: jupyterhub-secret-volume
+      imagePullSecrets:
+        - name: regcred
+      securityContext:
+        fsGroup: 99
+        runAsUser: 99
+      serviceAccountName: jupyterhub-sa
+      volumes:
+      - name: data # hostpath in actual generation
+        persistentVolumeClaim:
+          claimName: {{ .Values.namespace }}-data
+      - name: jwt-key-pub
+        secret:
+          secretName: jwt-key-pub
+      - name: jupyterhub
+        persistentVolumeClaim:
+          claimName: {{ .Values.namespace }}-jupyterhub
+      - configMap:
+          name: jupyterhub-jupyterhubconfig-py-config-map
+        name: jupyterhub-jupyterhubconfig-py-volume
+      - configMap:
+          name: jupyterhub-config-config-map
+        name: jupyterhub-config-volume
+      - name: jupyterhub-secret-volume
+        secret:
+          secretName: jupyterhub-secret-secret
+{{- end }}

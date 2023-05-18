@@ -1,0 +1,12 @@
+{{- if .Values.services.jupyterhub.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: jupyterhub-proxy-pdb
+  namespace: {{ .Values.namespace }}
+spec:
+  maxUnavailable: 0
+  selector:
+    matchLabels:
+      service: jupyterhub-proxy
+{{- end }}

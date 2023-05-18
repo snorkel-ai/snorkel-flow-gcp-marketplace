@@ -1,0 +1,17 @@
+{{- if .Values.volumes.snorkelflowData.persistentVolume.enabled }}
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ .Values.namespace }}-data-pv
+spec:
+  accessModes:
+  - ReadWriteMany
+  capacity:
+    storage: {{ .Values.volumes.snorkelflowData.storageRequest }}
+{{- if .Values.volumes.snorkelflowData.persistentVolume.driver }}
+{{ toYaml .Values.volumes.snorkelflowData.persistentVolume.driver | indent 2 }}
+{{- end }}
+  storageClassName: {{ .Values.volumes.snorkelflowData.storageClass }}
+  persistentVolumeReclaimPolicy: Retain
+  volumeMode: Filesystem
+{{- end }}

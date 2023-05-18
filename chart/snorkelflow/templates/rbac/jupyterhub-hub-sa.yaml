@@ -1,0 +1,7 @@
+{{- if .Values.services.jupyterhub.enabled }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: jupyterhub-sa
+  namespace: {{ .Values.namespace }}
+{{- end }}

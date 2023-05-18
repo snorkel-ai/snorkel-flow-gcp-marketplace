@@ -1,0 +1,150 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    always-pinned: "1"
+    service: studio-ray-worker
+    project: {{ .Values.namespace }}
+    snorkel.ai/compute-type: cpu
+  name: studio-ray-worker
+  namespace: {{ .Values.namespace }}
+spec:
+  strategy:
+    type: Recreate
+  replicas: 1
+  selector:
+    matchLabels:
+      service: studio-ray-worker
+      project: {{ .Values.namespace }}
+  template:
+    metadata:
+      labels:
+        always-pinned: "1"
+        service: studio-ray-worker
+        project: {{ .Values.namespace }}
+        snorkel.ai/compute-type: cpu
+    spec:
+{{- if .Values.affinity.binPackAlwaysPinnedPods }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: always-pinned
+                operator: In
+                values:
+                - "0"
+            topologyKey: kubernetes.io/hostname
+            namespaceSelector: {}
+{{- end }}
+      imagePullSecrets:
+        - name: regcred
+      securityContext:
+        runAsUser: 99
+        fsGroup: 99
+      containers:
+        - env:
+            - name: SERVICE_TYPE
+              value: studio-ray-worker
+            - name: SNORKEL_FLOW_VERSION
+              value: "config_test"
+            - name: SSO_HOST_IP
+              value: snorkelflow.snorkel-ai.com
+            - name: ENABLE_PRETRAINED_MODEL_DIRECTORY
+              value: "False"
+            - name: LD_PRELOAD
+              value: /usr/lib/x86_64-linux-gnu/libjemalloc.so.2
+            - name: MALLOC_CONF
+              value: background_thread:true
+            - name: MALLOC_MMAP_THRESHOLD_
+              value: "16384"
+            - name: STUDIO_RAY_ENABLED
+              value: "1"
+            - name: STUDIO_RAY_WORKER_CPU_COUNT
+              value: "8"
+            - name: STUDIO_RAY_WORKER_MEMORY_GB
+              value: "32"
+            - name: STUDIO_RAY_INTERACTIVE_SHARED_CPU_COUNT
+              value: "4"
+            - name: STUDIO_RAY_INTERACTIVE_SHARED_MEMORY_GB
+              value: "16"
+            - name: STUDIO_RAY_HEAD_REDIS_PORT
+              value: "7380"
+            - name: CUPY_CACHE_DIR
+              value: /var/lib/snorkel/.cupy-cache
+            - name: SNORKELFLOW_MOUNT_DIR
+              value: /data
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: REDIS_URL
+              value: redis
+            - name: MINIO_URL
+              value: http://minio:9001
+            - name: TELEGRAF_CADVISOR_URL
+              value: telegraf:8186
+            - name: TELEGRAF_URL
+              value: http://telegraf:8125
+            - name: TDM_CONN_STR
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: tdm_conn_str
+            - name: STUDIO_RAY_HEAD_URL
+              value: ray://studio-ray-head:10002
+            - name: STUDIO_API_URL
+              value: http://studio-api:8484
+            - name: MINIO_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: minio-secret
+                  key: minio_access_key
+            - name: MINIO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: minio-secret
+                  key: minio_secret_key
+          {{- if .Values.image.imageNames.studio }}
+          image: {{ .Values.image.imageNames.studio }}
+          {{- else if .Values.gpu.enabled }}
+          image: snorkelai/studio-api:{{ .Values.version }}-cuda
+          {{- else }}
+          image: snorkelai/studio-api:{{ .Values.version }}
+          {{- end }}
+          name: studio-ray-worker
+          args:
+            - ray-worker
+            - --ray-head-address=studio-ray-head
+            - --ray-head-port=7380
+            - --ray-head-client-port=10002
+          ports: []
+          volumeMounts:
+            - mountPath: /data
+              name: data
+            - mountPath: /etc/auth/jwt
+              name: jwt-key-pub
+            - mountPath: /dev/shm
+              name: dshm
+          resources:
+            requests:
+              memory: 32.0Gi
+              cpu: "8.0"
+            limits:
+              memory: 32.0Gi
+              cpu: "8.0"
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ .Values.namespace }}-data
+        - name: jwt-key-pub
+          secret:
+            secretName: jwt-key-pub
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 10000Mi

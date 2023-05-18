@@ -1,0 +1,134 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: studio-api-network-policy
+  namespace: {{ .Values.namespace }}
+spec:
+  egress:
+  - ports:
+    - port: 53
+      protocol: UDP
+    - port: 53
+      protocol: TCP
+    to: []
+{{- if .Values.traffic.allowInternetAccess}}
+  - to:
+    - ipBlock:
+        cidr: 0.0.0.0/0
+        except:
+        - 192.168.0.0/16
+        - 172.16.0.0/20
+{{- end }}
+  - ports:
+    - port: 8686
+    to:
+    - podSelector:
+        matchLabels:
+          project: {{ .Values.namespace }}
+          service: tdm-api
+  - ports:
+    - port: 5432
+    to:
+    - podSelector:
+        matchLabels:
+          project: {{ .Values.namespace }}
+          service: db
+  - ports:
+    - port: 6379
+    to:
+    - podSelector:
+        matchLabels:
+          project: {{ .Values.namespace }}
+          service: redis
+  - ports:
+    - port: 9000
+    - port: 9001
+    to:
+    - podSelector:
+        matchLabels:
+          project: {{ .Values.namespace }}
+          service: minio
+  - ports:
+    - port: 8186
+    - port: 8125
+      protocol: UDP
+    to:
+    - podSelector:
+        matchLabels:
+          project: {{ .Values.namespace }}
+          service: telegraf
+  - ports: []
+    to:
+    - podSelector:
+        matchLabels:
+          project: {{ .Values.namespace }}
+          service: studio-ray-head
+  - ports: []
+    to:
+    - podSelector:
+        matchLabels:
+          project: {{ .Values.namespace }}
+          service: studio-ray-worker
+  ingress:
+{{- if .Values.traffic.allowAllInboundTrafficOnKeyServices}}
+  - from: []
+    ports:
+    - port: 8484
+{{- end}}
+  - from:
+    - podSelector:
+        matchLabels:
+          project: {{ .Values.namespace }}
+          service: flow-ui
+    ports:
+    - port: 8484
+  - from:
+    - podSelector:
+        matchLabels:
+          project: {{ .Values.namespace }}
+          service: notebook
+    ports:
+    - port: 8484
+  - from:
+    - podSelector:
+        matchLabels:
+          project: {{ .Values.namespace }}
+          service: envoy-front-proxy
+    ports:
+    - port: 8484
+  - from:
+    - podSelector:
+        matchLabels:
+          project: {{ .Values.namespace }}
+          service: studio-ray-worker
+    ports:
+    - port: 8484
+  - from:
+    - podSelector:
+        matchLabels:
+          project: {{ .Values.namespace }}
+          service: studio-ray-head
+    ports:
+    - port: 8484
+{{- range $rule := .Values.traffic.networkPolicies.ingresses }}
+  - from:
+{{ toYaml $rule.from | indent 4}}
+    ports:
+      port: 8484
+{{- end }}
+{{- if .Values.services.jupyterhub.enabled }}
+  - from:
+    - podSelector:
+        matchLabels:
+          project: {{ .Values.namespace }}
+          service: jupyterhub
+    ports:
+    - port: 8484
+{{- end }}
+  podSelector:
+    matchLabels:
+      project: {{ .Values.namespace }}
+      service: studio-api
+  policyTypes:
+  - Ingress
+  - Egress

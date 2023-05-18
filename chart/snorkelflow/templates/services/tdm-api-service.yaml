@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    service: tdm-api
+    project: {{ .Values.namespace }}
+  name: tdm-api
+  namespace: {{ .Values.namespace }}
+spec:
+  type: {{ .Values.traffic.ingresses.serviceType }}
+  ports:
+  - name: "8686"
+    port: 8686
+    targetPort: 8686
+  selector:
+    service: tdm-api

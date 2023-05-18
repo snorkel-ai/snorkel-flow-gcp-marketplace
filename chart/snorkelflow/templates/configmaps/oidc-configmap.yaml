@@ -1,0 +1,56 @@
+{{ if .Values.authentication.oidc.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: oidc-configmap
+  namespace: {{ .Values.namespace }}
+data:
+    # Start of SSO Settings
+    {{- if .Values.authentication.oidc.ssoSettings.ssoEnabled }}
+    SSO_ENABLED: {{ .Values.authentication.oidc.ssoSettings.ssoEnabled }}
+    {{- end }}
+    {{- if .Values.authentication.oidc.ssoSettings.ssoRequired }}
+    SSO_REQUIRED: {{ .Values.authentication.oidc.ssoSettings.ssoRequired }}
+    {{- end }}
+    {{- if .Values.authentication.oidc.ssoSettings.ssoType }}
+    SSO_TYPE: {{ .Values.authentication.oidc.ssoSettings.ssoType }}
+    {{- end }}
+    # Start of OIDC Settings
+    {{- if .Values.authentication.oidc.oidcProviderSettings.clientId }}
+    OIDC_CLIENT_ID: {{ .Values.authentication.oidc.oidcProviderSettings.clientId }}
+    {{- end }}
+    {{- if .Values.authentication.oidc.oidcProviderSettings.clientSecret }}
+    OIDC_CLIENT_SECRET: {{ .Values.authentication.oidc.oidcProviderSettings.clientSecret }}
+    {{- end }}
+    {{- if .Values.authentication.oidc.oidcProviderSettings.redirectUris }}
+    OIDC_REDIRECT_URIS: {{ .Values.authentication.oidc.oidcProviderSettings.redirectUris }}
+    {{- end }}
+    {{- if .Values.authentication.oidc.oidcProviderSettings.issuer }}
+    OIDC_ISSUER: {{ .Values.authentication.oidc.oidcProviderSettings.issuer }}
+    {{- end }}
+    {{- if .Values.authentication.oidc.oidcProviderSettings.authorizationEndpoint }}
+    OIDC_AUTHORIZATION_ENDPOINT: {{ .Values.authentication.oidc.oidcProviderSettings.authorizationEndpoint }}
+    {{- end }}
+    {{- if .Values.authentication.oidc.oidcProviderSettings.tokenEndpoint }}
+    OIDC_TOKEN_ENDPOINT: {{ .Values.authentication.oidc.oidcProviderSettings.tokenEndpoint }}
+    {{- end }}
+    {{- if .Values.authentication.oidc.oidcProviderSettings.userinfoEndpoint }}
+    OIDC_USERINFO_ENDPOINT: {{ .Values.authentication.oidc.oidcProviderSettings.userinfoEndpoint }}
+    {{- end }}
+    {{- if .Values.authentication.oidc.oidcProviderSettings.jwksUri }}
+    OIDC_JWKS_URI: {{ .Values.authentication.oidc.oidcProviderSettings.jwksUri }}
+    {{- end }}
+    {{- if .Values.authentication.oidc.oidcProviderSettings.userinfoHandler }}
+    OIDC_USERINFO_HANDLER: {{ .Values.authentication.oidc.oidcProviderSettings.userinfoHandler }}
+    {{- end }}
+    {{- if .Values.authentication.oidc.oidcProviderSettings.resourceId }}
+    OIDC_RESOURCE_ID: {{ .Values.authentication.oidc.oidcProviderSettings.resourceId }}
+    {{- end }}
+    {{- if .Values.authentication.oidc.oidcProviderSettings.userinfoUid }}
+    OIDC_USERINFO_UID: {{ .Values.authentication.oidc.oidcProviderSettings.userinfoUid }}
+    {{- end }}
+    # Start of Admission Roles Settings
+    {{- if .Values.authentication.oidc.admissionRolesSettings.admissionRoles }}
+    ADMISSION_ROLES: {{ .Values.authentication.oidc.admissionRolesSettings.admissionRoles }}
+    {{- end }}
+{{- end }}

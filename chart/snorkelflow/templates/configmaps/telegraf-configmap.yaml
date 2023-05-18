@@ -1,0 +1,75 @@
+apiVersion: v1
+data:
+  telegraf.conf: |
+   [[inputs.postgresql_extensible]]
+    address = "${TDM_CONN_STR}"
+    tagexclude = [ "db", "server",]
+    [[inputs.postgresql_extensible.query]]
+    sqlquery = "SELECT relname as table_name, seq_scan, seq_tup_read, idx_scan, idx_tup_fetch, n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n_mod_since_analyze, COALESCE(EXTRACT(EPOCH from (current_timestamp - last_autovacuum)), -1) as seconds_since_last_autovacuum, COALESCE(EXTRACT(EPOCH from (current_timestamp - last_vacuum)), -1) as seconds_since_last_vacuum, COALESCE(EXTRACT(EPOCH from (current_timestamp - last_autoanalyze)), -1) as seconds_since_last_autoanalyze, COALESCE(EXTRACT(EPOCH from (current_timestamp - last_analyze)), -1) as seconds_since_last_analyze, vacuum_count, autovacuum_count, analyze_count, autoanalyze_count FROM pg_stat_user_tables"
+    withdbname = false
+    tagvalue = "table_name"
+    version = 901
+
+
+    [[outputs.influxdb_v2]]
+    alias = "local_influxdb"
+    urls = [ "${INFLUXDB_V2_URL}",]
+    token = "${INFLUXDB_ACCESS_KEY}"
+    organization = "${INFLUXDB_BUCKET}"
+    bucket = "${INFLUXDB_BUCKET}"
+
+    [global_tags]
+    instance_id = "${INSTANCE_ID}"
+
+    [agent]
+    interval = "10s"
+    round_interval = true
+    metric_batch_size = 1000
+    metric_buffer_limit = 10000
+    collection_jitter = "0s"
+    flush_interval = "10s"
+    flush_jitter = "0s"
+    precision = ""
+    hostname = "snorkel-telegraf.local"
+    omit_hostname = false
+
+    [inputs.statsd]
+    protocol = "udp"
+    service_address = ":8125"
+    percentiles = [ 50.0, 90.0, 99.0, 99.9, 99.95, 100.0,]
+    metric_separator = "_"
+    allowed_pending_messages = 10000
+    percentile_limit = 1000
+
+    [inputs.influxdb_listener]
+    service_address = ":8186"
+    read_timeout = "10s"
+    write_timeout = "10s"
+    max_body_size = 0
+    namedrop = [ "cpu_usage_per_cpu",]
+    tagexclude = [ "container_name",]
+
+    [inputs.postgresql]
+    address = "${TDM_CONN_STR}"
+    databases = [ "tdm",]
+    tagexclude = [ "db", "server",]
+
+    [inputs.redis]
+    servers = [ "tcp://${REDIS_URL}:6379",]
+
+    [inputs.internal]
+    name_prefix = "telegraf_"
+    collect_memstats = false
+    namepass = [ "internal_agent", "internal_gather", "internal_write",]
+    tagexclude = [ "address", "go_version", "version",]
+
+    [outputs.prometheus_client]
+    listen = ":9273"
+    metric_version = 2
+
+    [inputs.internal.tagdrop]
+    output = [ "prometheus_client",]
+kind: ConfigMap
+metadata:
+  name: telegraf
+  namespace: {{ .Values.namespace }}

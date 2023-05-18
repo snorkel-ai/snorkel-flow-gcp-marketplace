@@ -1,0 +1,84 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ray-worker-network-policy
+  namespace: {{ .Values.namespace }}
+spec:
+  egress:
+  - ports:
+    - port: 53
+      protocol: UDP
+    - port: 53
+      protocol: TCP
+    to: []
+{{- if .Values.traffic.allowInternetAccess}}
+  - to:
+    - ipBlock:
+        cidr: 0.0.0.0/0
+        except:
+        - 192.168.0.0/16
+        - 172.16.0.0/20
+{{- end }}
+  - ports:
+    - port: 6379
+    to:
+    - podSelector:
+        matchLabels:
+          project: {{ .Values.namespace }}
+          service: redis
+  - ports:
+    - port: 9000
+    - port: 9001
+    to:
+    - podSelector:
+        matchLabels:
+          project: {{ .Values.namespace }}
+          service: minio
+  - ports:
+    - port: 8186
+    - port: 8125
+      protocol: UDP
+    to:
+    - podSelector:
+        matchLabels:
+          project: {{ .Values.namespace }}
+          service: telegraf
+  - ports:
+    - port: 5432
+    to:
+    - podSelector:
+        matchLabels:
+          project: {{ .Values.namespace }}
+          service: db
+  - ports: []
+    to:
+    - podSelector:
+        matchLabels:
+          project: {{ .Values.namespace }}
+          service: ray-head
+  - ports: []
+    to:
+    - podSelector:
+        matchLabels:
+          project: {{ .Values.namespace }}
+          service: ray-worker
+  ingress:
+  - ports: []
+    from:
+    - podSelector:
+        matchLabels:
+          project: {{ .Values.namespace }}
+          service: ray-head
+  - ports: []
+    from:
+    - podSelector:
+        matchLabels:
+          project: {{ .Values.namespace }}
+          service: ray-worker
+  podSelector:
+    matchLabels:
+      project: {{ .Values.namespace }}
+      service: ray-worker
+  policyTypes:
+  - Ingress
+  - Egress

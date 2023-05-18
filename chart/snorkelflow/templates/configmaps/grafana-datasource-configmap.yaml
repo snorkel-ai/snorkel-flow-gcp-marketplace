@@ -1,0 +1,21 @@
+apiVersion: v1
+data:
+  grafana_datasource.yaml: |
+    apiVersion: 1
+    datasources:
+    - access: proxy
+      isDefault: true
+      jsonData:
+        defaultBucket: $INFLUXDB_BUCKET
+        organization: $INFLUXDB_BUCKET
+        tlsSkipVerify: true
+        version: Flux
+      name: influxdb
+      secureJsonData:
+        token: $INFLUXDB_ACCESS_KEY
+      type: influxdb
+      url: $INFLUXDB_V2_URL
+kind: ConfigMap
+metadata:
+  name: grafana-datasource
+  namespace: {{ .Values.namespace }}

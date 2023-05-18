@@ -1,0 +1,185 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    always-pinned: "0"
+    service: ray-worker
+    project: {{ .Values.namespace }}
+    snorkel.ai/ray-autoscaler-cluster: engine-ray
+    snorkel.ai/ray-autoscaler-kind: worker
+    snorkel.ai/ray-autoscaler-type: ray-worker
+    {{- if .Values.gpu.enabled }}
+    snorkel.ai/compute-type: gpu
+    {{- else }}
+    snorkel.ai/compute-type: cpu
+    {{- end }}
+  name: ray-worker
+  namespace: {{ .Values.namespace }}
+spec:
+  strategy:
+    type: Recreate
+{{- if eq .Values.autoscaling.worker_autoscaling "1" }}
+  replicas: 0
+{{- else if .Values.services.rayWorker.max_replicas }}
+  replicas: {{ .Values.services.rayWorker.max_replicas }}
+{{- else }}
+  replicas: 2
+{{- end }}
+  selector:
+    matchLabels:
+      service: ray-worker
+      project: {{ .Values.namespace }}
+  template:
+    metadata:
+      labels:
+        always-pinned: "0"
+        service: ray-worker
+        project: {{ .Values.namespace }}
+        snorkel.ai/ray-autoscaler-cluster: engine-ray
+        snorkel.ai/ray-autoscaler-kind: worker
+        snorkel.ai/ray-autoscaler-type: ray-worker
+        {{- if .Values.gpu.enabled }}
+        snorkel.ai/compute-type: gpu
+        {{- else }}
+        snorkel.ai/compute-type: cpu
+        {{- end }}
+    spec:
+{{- if .Values.affinity.binPackAlwaysPinnedPods }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: always-pinned
+                operator: In
+                values:
+                - "1"
+            topologyKey: kubernetes.io/hostname
+            namespaceSelector: {}
+{{- end }}
+      imagePullSecrets:
+        - name: regcred
+      securityContext:
+        runAsUser: 99
+        fsGroup: 99
+      {{- if .Values.gpu.enabled }}
+      {{- if .Values.gpu.gpu_config.node_selectors }}
+      nodeSelector:
+        {{- range $key, $value := .Values.gpu.gpu_config.node_selectors }}
+        {{ $key }}: "{{ $value }}"
+        {{- end }}
+      {{- end }}
+      {{- if .Values.gpu.gpu_config.tolerations }}
+      tolerations:
+      {{- range .Values.gpu.gpu_config.tolerations }}
+      - effect: {{ .effect }}
+        key: {{ .key }}
+        operator: {{ .operator }}
+        value: {{ .value | quote }}
+      {{- end }}
+    {{- end }}
+    {{- end }}
+      containers:
+      - env:
+        - name: SERVICE_TYPE
+          value: ray-worker
+        - name: IS_GPU_ENABLED
+          value: "1"
+        - name: SNORKEL_FLOW_VERSION
+          value: "{{ .Values.version }}"
+        - name: ENABLE_ROUTINE_ANALYZE
+          value: "False"
+        - name: DB_MINCONN
+          value: "0"
+        - name: DB_MAXCONN
+          value: "0"
+        - name: ENABLE_IPV6
+          value: "False"
+        - name: SSO_HOST_IP
+          value: {{ .Values.traffic.ingresses.services.snorkelflow.urlPrefix }}.{{ .Values.traffic.ingresses.domain }}
+        - name: ENABLE_PRETRAINED_MODEL_DIRECTORY
+          value: "False"
+        - name: LD_PRELOAD
+          value: /usr/lib/x86_64-linux-gnu/libjemalloc.so.2
+        - name: MALLOC_CONF
+          value: background_thread:true
+        - name: MALLOC_MMAP_THRESHOLD_
+          value: "16384"
+        - name: CUPY_CACHE_DIR
+          value: /var/lib/snorkel/.cupy-cache
+        - name: SNORKELFLOW_MOUNT_DIR
+          value: /data
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: REDIS_URL
+          value: redis
+        - name: MINIO_URL
+          value: http://minio:9001
+        - name: TELEGRAF_CADVISOR_URL
+          value: telegraf:8186
+        - name: TELEGRAF_URL
+          value: http://telegraf:8125
+        - name: TDM_CONN_STR
+          valueFrom:
+            secretKeyRef:
+              name: db-secret
+              key: tdm_conn_str
+        - name: MINIO_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: minio-secret
+              key: minio_access_key
+        - name: MINIO_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: minio-secret
+              key: minio_secret_key
+        {{- if .Values.image.imageNames.engine }}
+        image: {{ .Values.image.imageNames.engine }}
+        {{- else if .Values.gpu.enabled }}
+        image: snorkelai/engine:{{ .Values.version }}-cuda
+        {{- else }}
+        image: snorkelai/engine:{{ .Values.version }}
+        {{- end }}
+        name: ray-worker
+        args:
+        - ray-worker
+        - --ray-head-port=7379
+        ports: []
+        volumeMounts:
+        - mountPath: /data
+          name: data
+        - mountPath: /etc/auth/jwt
+          name: jwt-key-pub
+        - mountPath: /dev/shm
+          name: dshm
+        resources:
+          requests:
+            memory: 16.0Gi
+            cpu: "4.0"
+            {{- if .Values.gpu.enabled }}
+            nvidia.com/gpu: '1'
+            {{- end }}
+          limits:
+            memory: 16.0Gi
+            cpu: "4.0"
+            {{- if .Values.gpu.enabled }}
+            nvidia.com/gpu: '1'
+            {{- end }}
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: {{ .Values.namespace }}-data
+      - name: jwt-key-pub
+        secret:
+          secretName: jwt-key-pub
+      - name: dshm
+        emptyDir:
+          medium: Memory
+          sizeLimit: 10000Mi

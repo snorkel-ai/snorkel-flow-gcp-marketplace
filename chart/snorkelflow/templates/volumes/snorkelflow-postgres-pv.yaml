@@ -1,0 +1,17 @@
+{{- if .Values.volumes.postgres.persistentVolume.enabled }}
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ .Values.namespace }}-postgres-pv
+spec:
+  accessModes:
+  - ReadWriteOnce
+  capacity:
+    storage: {{ .Values.volumes.postgres.storageRequest }}
+{{- if .Values.volumes.postgres.persistentVolume.driver }}
+{{ toYaml .Values.volumes.postgres.persistentVolume.driver | indent 2 }}
+{{- end }}
+  storageClassName: {{ .Values.volumes.postgres.storageClass }}
+  persistentVolumeReclaimPolicy: Retain
+  volumeMode: Filesystem
+{{- end }}

@@ -1,0 +1,17 @@
+{{- if .Values.volumes.influxdb.persistentVolume.enabled }}
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ .Values.namespace }}-influxdb-pv
+spec:
+  accessModes:
+  - ReadWriteOnce
+  capacity:
+    storage: {{ .Values.volumes.influxdb.storageRequest }}
+{{- if .Values.volumes.influxdb.persistentVolume.driver }}
+{{ toYaml .Values.volumes.influxdb.persistentVolume.driver | indent 2 }}
+{{- end }}
+  storageClassName: {{ .Values.volumes.influxdb.storageClass }}
+  persistentVolumeReclaimPolicy: Retain
+  volumeMode: Filesystem
+{{- end }}

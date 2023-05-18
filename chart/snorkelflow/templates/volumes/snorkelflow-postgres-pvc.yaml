@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.namespace }}-postgres
+  namespace: {{ .Values.namespace }}
+{{- if .Values.volumes.postgres.storageClass }}
+  annotations:
+    volume.beta.kubernetes.io/storage-class: "{{ .Values.volumes.postgres.storageClass }}"
+{{- end }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.volumes.postgres.storageRequest }}
+{{- if .Values.volumes.postgres.storageClass }}
+  storageClassName: {{ .Values.volumes.postgres.storageClass }}
+{{- end }}
+{{- if .Values.volumes.postgres.persistentVolume.enabled }}
+  volumeName: {{ .Values.namespace }}-postgres-pv
+{{- else if .Values.volumes.postgres.volumeName }}
+  volumeName: {{ .Values.volumes.postgres.volumeName }}
+{{- end }}

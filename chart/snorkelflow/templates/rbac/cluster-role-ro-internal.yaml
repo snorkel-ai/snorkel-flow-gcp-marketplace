@@ -1,0 +1,34 @@
+{{- if .Values.services.jupyterhub.enabled }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: snorkelflow-internal-k8s-ro-sa-cr
+  namespace: {{ .Values.namespace }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - pods/status
+  - namespaces
+  - endpoints
+  - services
+  - services/status
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - apps
+  - extensions
+  - networking.k8s.io
+  resources:
+  - deployments
+  - deployments/status
+  - deployments/scale
+  - networkpolicies
+  verbs:
+  - get
+  - list
+  - watch
+{{- end }}

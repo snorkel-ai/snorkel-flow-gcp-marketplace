@@ -1,0 +1,116 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    always-pinned: "1"
+    service: db
+    project: {{ .Values.namespace }}
+    snorkel.ai/compute-type: cpu
+  name: db
+  namespace: {{ .Values.namespace }}
+spec:
+  strategy:
+    type: Recreate
+  replicas: 1
+  selector:
+    matchLabels:
+      service: db
+      project: {{ .Values.namespace }}
+  template:
+    metadata:
+      labels:
+        always-pinned: "1"
+        service: db
+        project: {{ .Values.namespace }}
+        snorkel.ai/compute-type: cpu
+    spec:
+{{- if .Values.affinity.binPackAlwaysPinnedPods }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: always-pinned
+                operator: In
+                values:
+                - "0"
+            topologyKey: kubernetes.io/hostname
+            namespaceSelector: {}
+{{- end }}
+      imagePullSecrets:
+        - name: regcred
+      securityContext:
+        fsGroup: 99
+        runAsUser: 99
+      containers:
+      - args:
+        - -c
+        - log_min_duration_statement=15000
+        - -c
+        - log_lock_waits=on
+        - -c
+        - log_checkpoints=on
+        - -c
+        - log_autovacuum_min_duration=250ms
+        - -c
+        - shared_preload_libraries=auto_explain
+        - -c
+        - auto_explain.log_min_duration=15s
+        - -c
+        - max_connections=600
+        - -c
+        - tcp_keepalives_idle=60
+        - -c
+        - tcp_keepalives_interval=5
+        - -c
+        - tcp_keepalives_count=5
+        - -c
+        - random_page_cost=1
+        env:
+        - name: SERVICE_TYPE
+          value: db
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: TELEGRAF_CADVISOR_URL
+          value: telegraf:8186
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: postgres_password
+        {{- if .Values.image.imageNames.postgres }}
+        image: {{ .Values.image.imageNames.postgres }}
+        {{- else }}
+        image: snorkelai/postgres:11.16.1i
+        {{- end }}
+        name: db
+        ports:
+          - containerPort: 5432
+        volumeMounts:
+        - mountPath: /var/lib/postgresql/data
+          name: postgres
+        - mountPath: /dev/shm
+          name: dshm
+        resources:
+          requests:
+            memory: 4.0Gi
+            cpu: "2.0"
+          limits:
+            memory: 4.0Gi
+            cpu: "2.0"
+      volumes:
+      - name: postgres
+        persistentVolumeClaim:
+          claimName: {{ .Values.namespace }}-postgres
+      - name: dshm
+        emptyDir:
+          medium: Memory
+          sizeLimit: 512Mi

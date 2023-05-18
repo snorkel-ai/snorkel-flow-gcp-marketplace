@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.namespace }}-redis
+  namespace: {{ .Values.namespace }}
+{{- if .Values.volumes.redis.storageClass }}
+  annotations:
+    volume.beta.kubernetes.io/storage-class: "{{ .Values.volumes.redis.storageClass }}"
+{{- end }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.volumes.redis.storageRequest }}
+{{- if .Values.volumes.redis.storageClass }}
+  storageClassName: {{ .Values.volumes.redis.storageClass }}
+{{- end }}
+{{- if .Values.volumes.redis.persistentVolume.enabled }}
+  volumeName: {{ .Values.namespace }}-redis-pv
+{{- end }}

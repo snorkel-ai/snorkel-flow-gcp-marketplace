@@ -1,0 +1,152 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: tdm-api-network-policy
+  namespace: {{ .Values.namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      project: {{ .Values.namespace }}
+      service: tdm-api
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+{{- if .Values.traffic.allowAllInboundTrafficOnKeyServices}}
+  - from: []
+    # Allow ingress from ingress controller/nodeport
+    ports:
+    - port: 8686
+{{- end}}
+{{- range $rule := .Values.traffic.networkPolicies.ingresses }}
+  - from:
+{{ toYaml $rule.from | indent 4}}
+    ports:
+      port: 8686
+{{- end }}
+  - from:
+    - podSelector:
+        matchLabels:
+          project: {{ .Values.namespace }}
+          service: flow-ui
+    ports:
+    - port: 8686
+  - from:
+    - podSelector:
+        matchLabels:
+          project: {{ .Values.namespace }}
+          service: studio-api
+    ports:
+    - port: 8686
+  - from:
+    - podSelector:
+        matchLabels:
+          project: {{ .Values.namespace }}
+          service: notebook
+    ports:
+    - port: 8686
+  - from:
+    - podSelector:
+        matchLabels:
+          project: {{ .Values.namespace }}
+          service: envoy-front-proxy
+    ports:
+    - port: 8686
+  - from:
+    - podSelector:
+        matchLabels:
+          project: {{ .Values.namespace }}
+          service: ray-head
+    ports:
+    - port: 8686
+{{- if .Values.services.jupyterhub.enabled }}
+  - from:
+    - podSelector:
+        matchLabels:
+          project: {{ .Values.namespace }}
+          service: jupyterhub
+    ports:
+    - port: 8686
+{{- end }}
+  - from:
+    - podSelector:
+        matchLabels:
+          project: {{ .Values.namespace }}
+          service: telegraf
+    ports:
+    - port: 8686
+  egress:
+  - to: []
+    # Allow DNS resolution
+    ports:
+    - port: 53
+      protocol: UDP
+    - port: 53
+      protocol: TCP
+{{- if .Values.traffic.allowInternetAccess}}
+  - to:
+    - ipBlock:
+        cidr: 0.0.0.0/0
+        except:
+        - 192.168.0.0/16
+        - 172.16.0.0/20
+{{- end }}
+  - to:
+    - podSelector:
+        matchLabels:
+          project: {{ .Values.namespace }}
+          service: redis
+    ports:
+    - port: 6379
+  - to:
+    - podSelector:
+        matchLabels:
+          project: {{ .Values.namespace }}
+          service: minio
+    ports:
+    - port: 9000
+    - port: 9001
+  - to:
+    - podSelector:
+        matchLabels:
+          project: {{ .Values.namespace }}
+          service: db
+    ports:
+    - port: 5432
+  - to:
+    - podSelector:
+        matchLabels:
+          project: {{ .Values.namespace }}
+          service: influxdb
+    ports:
+    - port: 8086
+  - to:
+    - podSelector:
+        matchLabels:
+          project: {{ .Values.namespace }}
+          service: telegraf
+    ports:
+    - port: 8186
+    - port: 8125
+      protocol: UDP
+  - to:
+    - podSelector:
+        matchLabels:
+          project: {{ .Values.namespace }}
+          service: notebook
+    ports:
+    - port: 8888
+    - port: 8282
+  - to:
+    - podSelector:
+        matchLabels:
+          project: {{ .Values.namespace }}
+          service: model-registry
+    ports:
+    - port: 2702
+  - to:
+    - podSelector:
+        matchLabels:
+          project: {{ .Values.namespace }}
+          service: ray-head
+    ports: []

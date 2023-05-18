@@ -1,0 +1,9 @@
+apiVersion: v2
+name: snorkelflow
+version: 0.1.1
+description: |
+  Instantiates a mostly complete Snorkel Flow installation in the target namespace. This preliminary version excludes support for some features:
+  * Grafana dashboard integration: the `/grafana` endpoint on Flow UI will not render any panels pending a future integration with the Helm chart
+  * JupyterHub integration is not available. Note that the single-container Jupyter notebook is available.
+maintainers:
+  - name: Snorkel Infrastructure Team

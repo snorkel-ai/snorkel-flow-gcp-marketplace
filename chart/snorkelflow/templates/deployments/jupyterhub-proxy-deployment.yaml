@@ -1,0 +1,106 @@
+{{- if .Values.services.jupyterhub.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    hub.jupyter.org/network-access-hub: 'true'
+    hub.jupyter.org/network-access-singleuser: 'true'
+    always-pinned: "0"
+    project: {{ .Values.namespace }}
+    service: jupyterhub-proxy
+    snorkel.ai/compute-type: cpu
+  name: jupyterhub-proxy
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      hub.jupyter.org/network-access-hub: 'true'
+      hub.jupyter.org/network-access-singleuser: 'true'
+      project: {{ .Values.namespace }}
+      service: jupyterhub-proxy
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        hub.jupyter.org/network-access-hub: 'true'
+        hub.jupyter.org/network-access-singleuser: 'true'
+        always-pinned: "0"
+        project: {{ .Values.namespace }}
+        service: jupyterhub-proxy
+        snorkel.ai/compute-type: cpu
+    spec:
+{{- if .Values.affinity.binPackAlwaysPinnedPods }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: always-pinned
+                operator: In
+                values:
+                - "1"
+            topologyKey: kubernetes.io/hostname
+            namespaceSelector: {}
+{{- end }}
+      containers:
+      - args:
+        - configurable-http-proxy
+        - --ip=
+        - --api-ip=
+        - --api-port=8001
+        - --default-target=http://jupyterhub:$(HUB_SERVICE_PORT)
+        - --error-target=http://jupyterhub:$(HUB_SERVICE_PORT)/hub/error
+        - --port=8000
+        env:
+        - name: SERVICE_TYPE
+          value: jupyterhub-proxy
+        - name: SNORKELFLOW_VERSION
+          value: "{{ .Values.version }}"
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: MINIO_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              key: minio_access_key
+              name: minio-secret
+        - name: MINIO_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              key: minio_secret_key
+              name: minio-secret
+        - name: CONFIGPROXY_AUTH_TOKEN
+          valueFrom:
+            secretKeyRef:
+              key: hub.config.ConfigurableHTTPProxy.auth_token
+              name: jupyterhub-secret-secret
+        {{- if .Values.image.imageNames.jupyterhubProxy }}
+        image: {{ .Values.image.imageNames.jupyterhubProxy }}
+        {{- else }}
+        image: snorkelai/jupyterhub-proxy:4.5.3c
+        {{- end }}
+        name: jupyterhub-proxy
+        ports:
+        - containerPort: 8000
+        - containerPort: 8001
+        resources:
+          requests:
+            memory: 8.0Gi
+            cpu: "2.0"
+          limits:
+            memory: 8.0Gi
+            cpu: "2.0"
+      securityContext:
+        runAsUser: 99
+      serviceAccountName: jupyterhub-sa
+      imagePullSecrets:
+        - name: regcred
+      volumes: []
+{{- end }}

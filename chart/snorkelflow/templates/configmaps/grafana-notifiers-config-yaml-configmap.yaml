@@ -1,0 +1,23 @@
+apiVersion: v1
+data:
+  grafana_notifiers_config.yaml: |
+{{- if .Values.pagerduty_key }}
+    notifiers:
+      - disable_resolve_message: false
+        frequency: 1h
+        is_default: true
+        name: pagerduty
+        secure_settings:
+          integrationKey: '{{ .Values.pagerduty_key }}'
+        send_reminder: true
+        settings:
+          autoResolve: true
+        type: pagerduty
+        uid: pagerduty
+{{- else }}
+    notifiers: []
+{{- end }}
+kind: ConfigMap
+metadata:
+  name: grafana-notifiers-config-yaml
+  namespace: {{ .Values.namespace }}
