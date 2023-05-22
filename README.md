@@ -158,7 +158,19 @@ To view your app, open the URL in your browser.
 To access the Snorkel Flow UI, you can either expose a public service endpoint or keep it private, but connect
 from your local environment with `kubectl port-forward`.
 
-## Ingress Setup
+## Exposing the Snorkel Flow service publicly
+
+Snorkel Flow will automatically create ingress objects of type `gce`,
+which will by default create an external load balancer. We also offer the option to specify a custom domain within the deployer schema.
+
+In order to find the public IP, run the following command:
+
+```shell
+kubectl get ingresses --namespace {{ .Release.Namespace }}
+```
+
+The external address will be the address for `snorkelflow-ingress`
+Keep in mind that that the provisioning process for the load balancer can take a while.
 
 ## Forward Snorkel Flow port in local environment
 
