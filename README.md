@@ -158,6 +158,8 @@ To view your app, open the URL in your browser.
 To access the Snorkel Flow UI, you can either expose a public service endpoint or keep it private, but connect
 from your local environment with `kubectl port-forward`.
 
+## Ingress Setup
+
 ## Forward Snorkel Flow port in local environment
 
 You can use port forwarding feature of `kubectl` to forward Snorkel Flow's port to your local machine. Run the following command in background:
