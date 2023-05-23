@@ -18,8 +18,12 @@ spec:
       - {{ .Values.traffic.ingresses.services.tdm.urlPrefix }}.{{ .Values.traffic.ingresses.domain }}
 {{- end }}
   rules:
+  {{- if .Values.traffic.ingresses.domain }}
   - host: {{ .Values.traffic.ingresses.services.tdm.urlPrefix }}.{{ .Values.traffic.ingresses.domain }}
     http:
+  {{- else }}
+  - http:
+  {{- end}}
       paths:
       - backend:
           service:

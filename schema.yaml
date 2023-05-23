@@ -4,7 +4,7 @@ x-google-marketplace:
   applicationApiVersion: v1beta1
   # The published version is required and MUST match the tag
   # of the deployer image
-  publishedVersion: '0.76.11'
+  publishedVersion: '0.76.12'
   publishedVersionMetadata:
     releaseNote: 'Snorkel Flow GCP Marketplace Deployer'
   clusterConstraints:
@@ -108,7 +108,7 @@ properties:
   projectName:  
     type: string
     default: $TAG
-    
+
 required:
 - name
 - namespace

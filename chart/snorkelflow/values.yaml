@@ -1,6 +1,6 @@
 # The project name is also the name of the Kubernetes namespace
 projectName: snorkelflow
-version: VERSION_TO_REPLACE
+version: 0.76.12
 image:
   # Configure an imagePullSecret
   # imagePullSecret: regcred
@@ -48,17 +48,18 @@ traffic:
   # Configure urls and domain. Snorkel Flow urls will be {urls.service}.{domain}
   # e.g. snorkelflow.snorkel-ai.com
   ingresses:
-    domain: snorkel-ai.com
-    ingressClassName: nginx
+
+    domain: snorkel.ai
     # The ServiceType for services that require an ingress (e.g. ClusterIP, NodePort)
     # https://kubernetes.io/docs/concepts/services-networking/service/
     serviceType: ClusterIP
     # Specify the cloud provider the ingresses are for or leave blank otherwise.
     # Currently supported providers: gcp
-    # cloudProvider: gcp
+    cloudProvider: gcp
     # By default, do not generate tls hosts for ingresses
     tlsHosts: false
-    annotations: {}
+    annotations:
+      kubernetes.io/ingress.class: "gce"
     # global annotations that apply to all service ingresses
     services:
       influxdb:

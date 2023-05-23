@@ -18,14 +18,18 @@ spec:
       - {{ .Values.traffic.ingresses.services.minio.urlPrefix }}.{{ .Values.traffic.ingresses.domain }}
 {{- end }}
   rules:
-    - host: {{ .Values.traffic.ingresses.services.minio.urlPrefix }}.{{ .Values.traffic.ingresses.domain }}
-      http:
-        paths:
-          - backend:
-              service:
-                name: minio
-                port:
-                  number: 9000
-            path: /
-            pathType: Prefix
+  {{- if .Values.traffic.ingresses.domain }}
+  - host: {{ .Values.traffic.ingresses.services.minio.urlPrefix }}.{{ .Values.traffic.ingresses.domain }}
+    http:
+  {{- else }}
+  - http:
+  {{- end}}
+      paths:
+      - backend:
+          service:
+            name: minio
+            port:
+              number: 9000
+        path: /
+        pathType: Prefix
 {{- end }}
