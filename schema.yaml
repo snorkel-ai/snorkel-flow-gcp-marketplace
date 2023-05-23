@@ -108,6 +108,19 @@ properties:
   projectName:  
     type: string
     default: $TAG
+  secretsGenerator.serviceAccount:
+    type: string
+    x-google-marketplace:
+      type: SERVICE_ACCOUNT
+      serviceAccount:
+        description: "Creates secrets for the deployment"
+        roles:
+        - type: ClusterRole
+          rulesType: CUSTOM
+          rules:
+          - apiGroups: [""]
+            resources: ["secrets"]
+            verbs: ["get", "watch", "list", "create"]
 
 required:
 - name
