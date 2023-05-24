@@ -65,8 +65,6 @@ spec:
           value: redis
         - name: TDM_API_URL
           value: http://tdm-api:8686
-        - name: ENVOY_FRONT_PROXY_URL
-          value: http://envoy-front-proxy:9901
         - name: INFLUXDB_V2_URL
           value: http://influxdb:8086
         - name: INFLUXDB_ACCESS_KEY

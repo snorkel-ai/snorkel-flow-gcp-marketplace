@@ -92,6 +92,14 @@ spec:
         - podSelector:
             matchLabels:
               project: {{ .Values.namespace }}
+              service: studio-dask
+      ports:
+        - port: 9000
+        - port: 9001
+    - from:
+        - podSelector:
+            matchLabels:
+              project: {{ .Values.namespace }}
               service: model-registry
       ports:
         - port: 9000

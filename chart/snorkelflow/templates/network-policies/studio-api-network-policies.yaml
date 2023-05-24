@@ -100,6 +100,13 @@ spec:
     - podSelector:
         matchLabels:
           project: {{ .Values.namespace }}
+          service: studio-dask
+    ports:
+    - port: 11500
+  - from:
+    - podSelector:
+        matchLabels:
+          project: {{ .Values.namespace }}
           service: studio-ray-worker
     ports:
     - port: 8484

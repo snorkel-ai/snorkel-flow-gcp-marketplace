@@ -58,8 +58,6 @@ spec:
               value: background_thread:true
             - name: MALLOC_MMAP_THRESHOLD_
               value: "16384"
-            - name: CUPY_CACHE_DIR
-              value: /var/lib/snorkel/.cupy-cache
             - name: SNORKELFLOW_MOUNT_DIR
               value: /data
             - name: POD_NAME

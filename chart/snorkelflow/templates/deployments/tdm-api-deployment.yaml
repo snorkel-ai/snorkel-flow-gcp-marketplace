@@ -77,8 +77,6 @@ spec:
           value: "False"
         - name: RAY_HEAD_URL
           value: "ray://ray-head:10001"
-        - name: SEPARATE_GPU_PODS
-          value: "0"
         - name: RAY_HEAD_REDIS_PORT
           value: "7379"
         - name: NUM_WORKERS_TINY
@@ -97,8 +95,6 @@ spec:
           value: background_thread:true
         - name: MALLOC_MMAP_THRESHOLD_
           value: "16384"
-        - name: CUPY_CACHE_DIR
-          value: /var/lib/snorkel/.cupy-cache
 {{- if eq .Values.autoscaling.worker_autoscaling "1" }}
         - name: MODEL_TRAINER_REPLICA_DEFAULT_COUNT
           value: {{ .Values.services.modelTrainer.max_replicas | quote }}
@@ -106,8 +102,6 @@ spec:
           value: {{ .Values.services.engine.max_replicas | quote }}
         - name: RAY_WORKER_REPLICA_DEFAULT_COUNT
           value: {{ .Values.services.rayWorker.max_replicas | quote }}
-        - name: RAY_GPU_WORKER_REPLICA_DEFAULT_COUNT
-          value: {{ .Values.services.rayGpuWorker.max_replicas | quote }}
         - name: POD_AUTOSCALING_ENABLED
           value: "1"
 {{- else }}
@@ -117,8 +111,6 @@ spec:
           value: "1"
         - name: RAY_WORKER_REPLICA_DEFAULT_COUNT
           value: "2"
-        - name: RAY_GPU_WORKER_REPLICA_DEFAULT_COUNT
-          value: "0"
         - name: POD_AUTOSCALING_ENABLED
           value: "0"
 {{- end }}

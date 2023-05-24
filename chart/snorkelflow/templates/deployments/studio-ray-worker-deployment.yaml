@@ -65,13 +65,11 @@ spec:
             - name: STUDIO_RAY_WORKER_MEMORY_GB
               value: "32"
             - name: STUDIO_RAY_INTERACTIVE_SHARED_CPU_COUNT
-              value: "4"
+              value: "8"
             - name: STUDIO_RAY_INTERACTIVE_SHARED_MEMORY_GB
-              value: "16"
+              value: "32"
             - name: STUDIO_RAY_HEAD_REDIS_PORT
               value: "7380"
-            - name: CUPY_CACHE_DIR
-              value: /var/lib/snorkel/.cupy-cache
             - name: SNORKELFLOW_MOUNT_DIR
               value: /data
             - name: POD_NAME

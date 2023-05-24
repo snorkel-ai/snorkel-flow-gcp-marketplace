@@ -41,13 +41,6 @@ spec:
             project: {{ .Values.namespace }}
             service: tdm-api
   - ports:
-      - port: 9901
-    to:
-      - podSelector:
-          matchLabels:
-            project: snorkelflow
-            service: envoy-front-proxy
-  - ports:
       - port: 8086
     to:
       - podSelector:
@@ -146,6 +139,15 @@ spec:
             service: envoy-front-proxy
     ports:
       - port: 8186
+  - from:
+      - podSelector:
+          matchLabels:
+            project: {{ .Values.namespace }}
+            service: studio-dask
+    ports:
+      - port: 8186
+      - port: 8125
+        protocol: UDP
   - from:
       - podSelector:
           matchLabels:

@@ -69,16 +69,12 @@ spec:
           value: "0"
         - name: RAY_WORKER_REPLICA_DEFAULT_COUNT
           value: "2"
-        - name: RAY_GPU_WORKER_REPLICA_DEFAULT_COUNT
-          value: "0"
         - name: LD_PRELOAD
           value: /usr/lib/x86_64-linux-gnu/libjemalloc.so.2
         - name: MALLOC_CONF
           value: background_thread:true
         - name: MALLOC_MMAP_THRESHOLD_
           value: "16384"
-        - name: CUPY_CACHE_DIR
-          value: /var/lib/snorkel/.cupy-cache
         - name: SNORKELFLOW_MOUNT_DIR
           value: /data
         - name: POD_NAME

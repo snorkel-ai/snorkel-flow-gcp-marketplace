@@ -18,4 +18,6 @@ spec:
 {{- end }}
 {{- if .Values.volumes.redis.persistentVolume.enabled }}
   volumeName: {{ .Values.namespace }}-redis-pv
+{{- else if .Values.volumes.redis.volumeName }}
+  volumeName: {{ .Values.volumes.redis.volumeName }}
 {{- end }}

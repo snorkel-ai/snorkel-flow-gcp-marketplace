@@ -3,25 +3,25 @@ kind: Deployment
 metadata:
   labels:
     always-pinned: "0"
-    service: minio
     project: {{ .Values.namespace }}
+    service: studio-dask
     snorkel.ai/compute-type: cpu
-  name: minio
+  name: studio-dask
   namespace: {{ .Values.namespace }}
 spec:
-  strategy:
-    type: Recreate
-  replicas: 1
+  replicas: 0
   selector:
     matchLabels:
-      service: minio
       project: {{ .Values.namespace }}
+      service: studio-dask
+  strategy:
+    type: Recreate
   template:
     metadata:
       labels:
         always-pinned: "0"
-        service: minio
         project: {{ .Values.namespace }}
+        service: studio-dask
         snorkel.ai/compute-type: cpu
     spec:
 {{- if .Values.affinity.binPackAlwaysPinnedPods }}
@@ -37,15 +37,32 @@ spec:
             topologyKey: kubernetes.io/hostname
             namespaceSelector: {}
 {{- end }}
-      imagePullSecrets:
-        - name: regcred
-      securityContext:
-        runAsUser: 99
-        fsGroup: 99
       containers:
-      - env:
+      - args:
+        - api
+        - --port
+        - '0'
+        - --mode
+        - dask
+        - --host
+        - 0.0.0.0
+        env:
         - name: SERVICE_TYPE
-          value: minio
+          value: studio-dask
+        - name: IS_GPU_ENABLED
+          value: "0"
+        - name: DDF_CACHE_WORKERS
+          value: '0'
+        - name: DDF_CACHE_THREADS
+          value: '0'
+        - name: ENABLE_IPV6
+          value: "False"
+        - name: LD_PRELOAD
+          value: /usr/lib/x86_64-linux-gnu/libjemalloc.so.2
+        - name: MALLOC_CONF
+          value: background_thread:true
+        - name: MALLOC_MMAP_THRESHOLD_
+          value: '16384'
         - name: SNORKELFLOW_MOUNT_DIR
           value: /data
         - name: POD_NAME
@@ -56,61 +73,52 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.podIP
+        - name: MINIO_URL
+          value: http://minio:9001
         - name: TELEGRAF_CADVISOR_URL
           value: telegraf:8186
+        - name: TELEGRAF_URL
+          value: http://telegraf:8125
+        - name: STUDIO_API_URL
+          value: http://studio-api:8484
         - name: MINIO_ACCESS_KEY
           valueFrom:
             secretKeyRef:
-              name: minio-secret
               key: minio_access_key
+              name: minio-secret
         - name: MINIO_SECRET_KEY
           valueFrom:
             secretKeyRef:
-              name: minio-secret
               key: minio_secret_key
-        args:
-        - server
-        - /data
-        - --console-address
-        - :9000
-        - --address
-        - :9001
-        {{- if .Values.image.imageNames.minio }}
-        image: {{ .Values.image.imageNames.minio }}
+              name: minio-secret
+        {{- if .Values.image.imageNames.studio }}
+        image: {{ .Values.image.imageNames.studio }}
+        {{- else if .Values.gpu.enabled }}
+        image: snorkelai/studio-api:{{ .Values.version }}-cuda
         {{- else }}
-        image: snorkelai/minio:RELEASE.2022-03-03T21-21-16Zi
+        image: snorkelai/studio-api:{{ .Values.version }}
         {{- end }}
-        name: minio
-        ports:
-          - containerPort: 9000
-          - containerPort: 9001
+        name: studio-dask
+        ports: []
         resources:
-          requests:
-            memory: 2.0Gi
-            cpu: "1.0"
+{{- if .Values.services.studioDask.resources }}
+{{ toYaml .Values.services.studioDask.resources | indent 10 }}
+{{- else }}
           limits:
-            memory: 2.0Gi
-            cpu: "1.0"
-        readinessProbe:
-          httpGet:
-            path: /minio/health/live
-            port: 9000
-          initialDelaySeconds: 3
-          periodSeconds: 30
-        startupProbe:
-          httpGet:
-            path: /minio/health/live
-            port: 9000
-          periodSeconds: 30
-          failureThreshold: 120
-        livenessProbe:
-          httpGet:
-            path: /minio/health/live
-            port: 9000
-          periodSeconds: 30
+            cpu: '0.25'
+            memory: 1.0Gi
+          requests:
+            cpu: '0.25'
+            memory: 1.0Gi
+{{- end }}
         volumeMounts:
         - mountPath: /data
           name: data
+      imagePullSecrets:
+      - name: regcred
+      securityContext:
+        fsGroup: 99
+        runAsUser: 99
       volumes:
       - name: data
         persistentVolumeClaim:

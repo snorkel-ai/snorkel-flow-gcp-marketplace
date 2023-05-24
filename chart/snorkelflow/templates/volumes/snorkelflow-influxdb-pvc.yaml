@@ -18,4 +18,6 @@ spec:
 {{- end }}
 {{- if .Values.volumes.influxdb.persistentVolume.enabled }}
   volumeName: {{ .Values.namespace }}-influxdb-pv
+{{- else if .Values.volumes.influxdb.volumeName }}
+  volumeName: {{ .Values.volumes.influxdb.volumeName }}
 {{- end }}

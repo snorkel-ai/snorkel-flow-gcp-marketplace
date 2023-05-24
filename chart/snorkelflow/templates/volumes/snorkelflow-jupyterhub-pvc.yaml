@@ -20,4 +20,6 @@ spec:
 {{- end }}
 {{- if .Values.volumes.jupyterhub.persistentVolume.enabled }}
   volumeName: {{ .Values.namespace }}-jupyterhub-pv
+{{- else if .Values.volumes.jupyterhub.volumeName }}
+  volumeName: {{ .Values.volumes.jupyterhub.volumeName }}
 {{- end }}
