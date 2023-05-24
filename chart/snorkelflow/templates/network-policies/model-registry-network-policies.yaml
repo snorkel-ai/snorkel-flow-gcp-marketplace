@@ -1,0 +1,65 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: model-registry-network-policy
+  namespace: {{ .Values.namespace }}
+spec:
+  egress:
+  - ports:
+    - port: 53
+      protocol: UDP
+    - port: 53
+      protocol: TCP
+    to: []
+{{- if .Values.traffic.allowInternetAccess}}
+  - to:
+    - ipBlock:
+        cidr: 0.0.0.0/0
+        except:
+        - 192.168.0.0/16
+        - 172.16.0.0/20
+{{- end }}
+  - ports:
+    - port: 9000
+    - port: 9001
+    to:
+    - podSelector:
+        matchLabels:
+          project: {{ .Values.namespace }}
+          service: minio
+  - ports:
+    - port: 5432
+    to:
+    - podSelector:
+        matchLabels:
+          project: {{ .Values.namespace }}
+          service: db
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          project: {{ .Values.namespace }}
+          service: tdm-api
+    ports:
+    - port: 2702
+  - from:
+    - podSelector:
+        matchLabels:
+          project: {{ .Values.namespace }}
+          service: engine
+    ports:
+    - port: 2702
+  - from:
+    - podSelector:
+        matchLabels:
+          project: {{ .Values.namespace }}
+          service: engine-tiny
+    ports:
+    - port: 2702
+  podSelector:
+    matchLabels:
+      project: {{ .Values.namespace }}
+      service: model-registry
+  policyTypes:
+  - Ingress
+  - Egress

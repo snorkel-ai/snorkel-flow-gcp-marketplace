@@ -1,0 +1,132 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    always-pinned: "0"
+    project: {{ .Values.namespace }}
+    service: model-registry
+    snorkel.ai/compute-type: cpu
+  name: model-registry
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      project: {{ .Values.namespace }}
+      service: model-registry
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        always-pinned: "0"
+        project: {{ .Values.namespace }}
+        service: model-registry
+        snorkel.ai/compute-type: cpu
+    spec:
+{{- if .Values.affinity.binPackAlwaysPinnedPods }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: always-pinned
+                operator: In
+                values:
+                - "1"
+            topologyKey: kubernetes.io/hostname
+            namespaceSelector: {}
+{{- end }}
+      imagePullSecrets:
+        - name: regcred
+      securityContext:
+        runAsUser: 99
+      containers:
+      - args:
+        - --gunicorn-opts=--log-level=debug
+        - --gunicorn-opts=--timeout=180
+        - --db-connection-str
+        - dbname=model-registry host=db user=postgres password=postgres
+        - --bucket-name
+        - model-registry-assets
+        - --port
+        - '2702'
+        - --n-workers
+        - '1'
+        - --host
+        - 0.0.0.0
+        env:
+        - name: SERVICE_TYPE
+          value: model-registry
+        - name: _MLFLOW_SERVER_FILE_STORE
+          value: postgresql://postgres:postgres@db/model-registry
+        - name: _MLFLOW_SERVER_ARTIFACT_ROOT
+          value: ''
+        - name: _MLFLOW_SERVER_ARTIFACT_DESTINATION
+          value: s3://model-registry-assets
+        - name: _MLFLOW_SERVER_SERVE_ARTIFACTS
+          value: 'true'
+        - name: _MLFLOW_STATIC_PREFIX
+          value: ''
+        - name: ENABLE_IPV6
+          value: "False"
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: MINIO_URL
+          value: http://minio:9001
+        - name: TDM_CONN_STR
+          valueFrom:
+            secretKeyRef:
+              key: tdm_conn_str
+              name: db-secret
+        - name: MINIO_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              key: minio_access_key
+              name: minio-secret
+        - name: MINIO_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              key: minio_secret_key
+              name: minio-secret
+        {{- if .Values.image.imageNames.modelRegistry }}
+        image: {{ .Values.image.imageNames.modelRegistry }}
+        {{- else if .Values.gpu.enabled }}
+        image: snorkelai/model-registry:{{ .Values.version }}-cuda
+        {{- else }}
+        image: snorkelai/model-registry:{{ .Values.version }}
+        {{- end }}
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 2702
+          periodSeconds: 30
+        startupProbe:
+          httpGet:
+            path: /
+            port: 2702
+          failureThreshold: 120
+          periodSeconds: 30
+        name: model-registry
+        ports:
+        - containerPort: 2702
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 2702
+          initialDelaySeconds: 3
+          periodSeconds: 30
+        resources:
+          requests:
+            memory: 2.0Gi
+            cpu: "1.0"
+          limits:
+            memory: 2.0Gi
+            cpu: "1.0"
+      volumes: []

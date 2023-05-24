@@ -1,0 +1,35 @@
+{{- if and .Values.traffic.ingresses.services.influxdb.enabled (not .Values.traffic.istio.enabled) }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Values.namespace }}-influxdb-ingress
+  namespace: {{ .Values.namespace }}
+{{- if or .Values.traffic.ingresses.annotations .Values.traffic.ingresses.services.influxdb.annotations }}
+  annotations:
+{{ toYaml (merge .Values.traffic.ingresses.services.influxdb.annotations .Values.traffic.ingresses.annotations) | indent 4 }}
+{{- end }}
+spec:
+{{- if .Values.traffic.ingresses.ingressClassName }}
+  ingressClassName: {{ .Values.traffic.ingresses.ingressClassName }}
+{{- end }}
+{{- if .Values.traffic.ingresses.tlsHosts }}
+  tls:
+  - hosts:
+      - {{ .Values.traffic.ingresses.services.influxdb.urlPrefix }}.{{ .Values.traffic.ingresses.domain }}
+{{- end }}
+  rules:
+  {{- if .Values.traffic.ingresses.domain }}
+  - host: {{ .Values.traffic.ingresses.services.influxdb.urlPrefix }}.{{ .Values.traffic.ingresses.domain }}
+    http:
+  {{- else }}
+  - http:
+  {{- end}}
+      paths:
+      - backend:
+          service:
+            name: influxdb
+            port:
+              number: 8086
+        path: /
+        pathType: Prefix
+{{- end }}

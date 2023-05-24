@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    always-pinned: "1"
+    service: redis
+    project: {{ .Values.namespace }}
+    snorkel.ai/compute-type: cpu
+  name: redis
+  namespace: {{ .Values.namespace }}
+spec:
+  strategy:
+    type: Recreate
+  replicas: 1
+  selector:
+    matchLabels:
+      service: redis
+      project: {{ .Values.namespace }}
+  template:
+    metadata:
+      labels:
+        always-pinned: "1"
+        service: redis
+        project: {{ .Values.namespace }}
+        snorkel.ai/compute-type: cpu
+    spec:
+{{- if .Values.affinity.binPackAlwaysPinnedPods }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: always-pinned
+                operator: In
+                values:
+                - "0"
+            topologyKey: kubernetes.io/hostname
+            namespaceSelector: {}
+{{- end }}
+      imagePullSecrets:
+        - name: regcred
+      securityContext:
+        runAsUser: 99
+        fsGroup: 99
+      volumes:
+      - name: redis
+        persistentVolumeClaim:
+          claimName: {{ .Values.namespace }}-redis
+      containers:
+      {{- if .Values.image.imageNames.redis }}
+      - image: {{ .Values.image.imageNames.redis }}
+      {{- else }}
+      - image: snorkelai/redis:5.0.13k
+      {{- end }}
+        name: redis
+        ports:
+          - containerPort: 6379
+        env:
+        - name: SERVICE_TYPE
+          value: redis
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: TELEGRAF_CADVISOR_URL
+          value: telegraf:8186
+        args:
+        - redis-server
+        - --dir
+        - "/var/lib/redis/data"
+        - --save
+        - "60"
+        - "1"
+        resources:
+          requests:
+            memory: 4.0Gi
+            cpu: "1.0"
+          limits:
+            memory: 4.0Gi
+            cpu: "1.0"
+        volumeMounts:
+        - mountPath: /var/lib/redis/data
+          name: redis
+

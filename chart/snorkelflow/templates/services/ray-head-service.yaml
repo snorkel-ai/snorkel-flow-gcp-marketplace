@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    project: {{ .Values.namespace }}
+    service: ray-head
+  name: ray-head
+  namespace: {{ .Values.namespace }}
+spec:
+  ports:
+  - name: '7379'
+    port: 7379
+    targetPort: 7379
+  - name: '8265'
+    port: 8265
+    targetPort: 8265
+  - name: '10001'
+    port: 10001
+    targetPort: 10001
+  selector:
+    service: ray-head
+  type: {{ .Values.traffic.ingresses.serviceType }}

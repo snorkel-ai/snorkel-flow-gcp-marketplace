@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.namespace }}-data
+  namespace: {{ .Values.namespace }}
+  annotations:
+    volume.beta.kubernetes.io/storage-class: "{{ .Values.volumes.snorkelflowData.storageClass }}"
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: {{ .Values.volumes.snorkelflowData.storageRequest }}
+  storageClassName: "{{ .Values.volumes.snorkelflowData.storageClass }}"
+  {{- if .Values.volumes.snorkelflowData.persistentVolume.enabled }}
+  volumeName: {{ .Values.namespace }}-data-pv
+  {{- else if .Values.volumes.snorkelflowData.volumeName }}
+  volumeName: {{ .Values.volumes.snorkelflowData.volumeName }}
+  {{- end }}

@@ -1,0 +1,202 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    always-pinned: "0"
+    project: {{ .Values.namespace }}
+    service: studio-api
+    snorkel.ai/compute-type: cpu
+  name: studio-api
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      project: {{ .Values.namespace }}
+      service: studio-api
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        always-pinned: "0"
+        project: {{ .Values.namespace }}
+        service: studio-api
+        snorkel.ai/compute-type: cpu
+    spec:
+{{- if .Values.affinity.binPackAlwaysPinnedPods }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: always-pinned
+                operator: In
+                values:
+                - "1"
+            topologyKey: kubernetes.io/hostname
+            namespaceSelector: {}
+{{- end }}
+      containers:
+      - args:
+        - api
+        - --port
+        - '8484'
+        - --host
+        - 0.0.0.0
+        env:
+        - name: SERVICE_TYPE
+          value: studio-api
+        - name: IS_GPU_ENABLED
+          value: "0"
+        - name: DB_MINCONN
+{{- if .Values.services.studioApi.env.DB_MINCONN }}
+          value: '{{ .Values.services.studioApi.env.DB_MINCONN }}'
+{{- else }}
+          value: '49'
+{{- end }}
+        - name: DB_MAXCONN
+{{- if .Values.services.studioApi.env.DB_MAXCONN }}
+          value: '{{ .Values.services.studioApi.env.DB_MAXCONN }}'
+{{- else }}
+          value: '98'
+{{- end }}
+        - name: DDF_CACHE_WORKERS
+          value: '0'
+        - name: DDF_CACHE_THREADS
+          value: '0'
+        - name: ENABLE_IPV6
+          value: "False"
+        - name: STUDIO_GUNICORN_WORKERS
+{{- if .Values.services.studioApi.env.STUDIO_GUNICORN_WORKERS }}
+          value: '{{ .Values.services.studioApi.env.STUDIO_GUNICORN_WORKERS }}'
+{{- else }}
+          value: '4'
+{{- end }}
+        - name: SSO_HOST_IP
+          value: {{ .Values.traffic.ingresses.services.snorkelflow.urlPrefix }}.{{ .Values.traffic.ingresses.domain }}
+        - name: ENABLE_PRETRAINED_MODEL_DIRECTORY
+          value: "False"
+{{- if .Values.services.studioApi.env.STUDIO_API_NUM_RQ_WORKERS }}
+        - name: STUDIO_API_NUM_RQ_WORKERS
+          value: '{{ .Values.services.studioApi.env.STUDIO_API_NUM_RQ_WORKERS }}'
+{{- end }}
+        - name: STUDIO_RAY_ENABLED
+          value: '1'
+        - name: STUDIO_RAY_WORKER_CPU_COUNT
+          value: '8'
+        - name: STUDIO_RAY_WORKER_MEMORY_GB
+          value: '32'
+        - name: STUDIO_RAY_INTERACTIVE_SHARED_CPU_COUNT
+          value: '8'
+        - name: STUDIO_RAY_INTERACTIVE_SHARED_MEMORY_GB
+          value: '32'
+        - name: STUDIO_RAY_HEAD_REDIS_PORT
+          value: '7380'
+        - name: LD_PRELOAD
+          value: /usr/lib/x86_64-linux-gnu/libjemalloc.so.2
+        - name: MALLOC_CONF
+          value: background_thread:true
+        - name: MALLOC_MMAP_THRESHOLD_
+          value: '16384'
+        - name: SNORKELFLOW_MOUNT_DIR
+          value: /data
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: TDM_API_URL
+          value: http://tdm-api:8686
+        - name: TDM_CONN_STR
+          valueFrom:
+            secretKeyRef:
+              key: tdm_conn_str
+              name: db-secret
+        - name: REDIS_URL
+          value: redis
+        - name: MINIO_URL
+          value: http://minio:9001
+        - name: TELEGRAF_CADVISOR_URL
+          value: telegraf:8186
+        - name: TELEGRAF_URL
+          value: http://telegraf:8125
+        - name: STUDIO_RAY_HEAD_URL
+          value: ray://studio-ray-head:10002
+        - name: MINIO_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              key: minio_access_key
+              name: minio-secret
+        - name: MINIO_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              key: minio_secret_key
+              name: minio-secret
+{{- if .Values.services.studioApi.env.SENTRY_DSN }}
+        - name: SENTRY_DSN
+          value: "{{ .Values.services.studioApi.env.SENTRY_DSN }}"
+{{- end }}
+{{- if .Values.services.studioApi.env.SENTRY_ENVIRONMENT }}
+        - name: SENTRY_ENVIRONMENT
+          value: "{{ .Values.services.studioApi.env.SENTRY_ENVIRONMENT }}"
+{{- end }}
+{{- if .Values.image.imageNames.studio }}
+        image: {{ .Values.image.imageNames.studio }}
+{{- else if .Values.gpu.enabled }}
+        image: snorkelai/studio-api:{{ .Values.version }}-cuda
+{{- else }}
+        image: snorkelai/studio-api:{{ .Values.version }}
+{{- end }}
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8484
+          periodSeconds: 30
+        name: studio-api
+        ports:
+        - containerPort: 8484
+        - containerPort: 12500
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8484
+          initialDelaySeconds: 3
+          periodSeconds: 30
+        startupProbe:
+          httpGet:
+            path: /
+            port: 8484
+          periodSeconds: 30
+          failureThreshold: 120
+        resources:
+{{- if .Values.services.studioApi.resources }}
+{{ toYaml .Values.services.studioApi.resources | indent 10 }}
+{{- else }}
+          limits:
+            cpu: '8.0'
+            memory: 32.0Gi
+          requests:
+            cpu: '8.0'
+            memory: 32.0Gi
+{{- end }}
+        volumeMounts:
+        - mountPath: /data
+          name: data
+        - mountPath: /etc/auth/jwt
+          name: jwt-key-pub
+      imagePullSecrets:
+      - name: regcred
+      securityContext:
+        fsGroup: 99
+        runAsUser: 99
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: {{ .Values.namespace }}-data
+      - name: jwt-key-pub
+        secret:
+          secretName: jwt-key-pub

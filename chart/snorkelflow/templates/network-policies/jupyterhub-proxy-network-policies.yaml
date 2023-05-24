@@ -1,0 +1,76 @@
+{{- if .Values.services.jupyterhub.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: jupyterhub-proxy-network-policy
+  namespace: {{ .Values.namespace }}
+spec:
+  egress:
+  - ports:
+    - port: 53
+      protocol: UDP
+    - port: 53
+      protocol: TCP
+    to: []
+{{- if .Values.traffic.allowInternetAccess}}
+  - to:
+    - ipBlock:
+        cidr: 0.0.0.0/0
+        except:
+        - 192.168.0.0/16
+        - 172.16.0.0/20
+{{- end }}
+  - ports:
+    - port: 8081
+    to:
+    - podSelector:
+        matchLabels:
+          project: {{ .Values.namespace }}
+          service: jupyterhub
+  - ports:
+    - port: 8888
+    to:
+    - podSelector:
+        matchLabels:
+          app: jupyterhub
+          component: singleuser-server
+          release: jupyterhub
+  ingress:
+  - from: []
+    ports:
+    - port: 8000
+    - port: 8001
+  - from:
+    - podSelector:
+        matchLabels:
+          project: {{ .Values.namespace }}
+          service: envoy-front-proxy
+    ports:
+    - port: 8000
+  - from:
+    - podSelector:
+        matchLabels:
+          project: {{ .Values.namespace }}
+          service: jupyterhub
+    ports:
+    - port: 8000
+  - from:
+    - podSelector:
+        matchLabels:
+          hub.jupyter.org/network-access-proxy-http: 'true'
+    ports:
+    - port: 8000
+  - from:
+    - podSelector:
+        matchLabels:
+          hub.jupyter.org/network-access-proxy-api: 'true'
+    ports:
+    - port: 8001
+  podSelector:
+    matchLabels:
+      project: {{ .Values.namespace }}
+      service: jupyterhub-proxy
+  policyTypes:
+  - Ingress
+  - Egress
+{{- end }}

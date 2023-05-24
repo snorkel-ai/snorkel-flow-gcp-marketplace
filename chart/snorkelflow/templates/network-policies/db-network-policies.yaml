@@ -1,0 +1,105 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: db-network-policy
+  namespace: {{ .Values.namespace }}
+spec:
+  egress:
+    - ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+      to: []
+    - ports:
+        - port: 8186
+      to:
+        - podSelector:
+            matchLabels:
+              project: {{ .Values.namespace }}
+              service: telegraf
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              project: {{ .Values.namespace }}
+              service: tdm-api
+      ports:
+        - port: 5432
+    - from:
+        - podSelector:
+            matchLabels:
+              project: {{ .Values.namespace }}
+              service: studio-api
+      ports:
+        - port: 5432
+    - from:
+        - podSelector:
+            matchLabels:
+              project: {{ .Values.namespace }}
+              service: engine
+      ports:
+        - port: 5432
+    - from:
+        - podSelector:
+            matchLabels:
+              project: {{ .Values.namespace }}
+              service: engine-tiny
+      ports:
+        - port: 5432
+    - from:
+        - podSelector:
+            matchLabels:
+              project: {{ .Values.namespace }}
+              service: model-trainer
+      ports:
+        - port: 5432
+    - from:
+        - podSelector:
+            matchLabels:
+              project: {{ .Values.namespace }}
+              service: model-registry
+      ports:
+        - port: 5432
+    - from:
+        - podSelector:
+            matchLabels:
+              project: {{ .Values.namespace }}
+              service: ray-head
+      ports:
+        - port: 5432
+    - from:
+        - podSelector:
+            matchLabels:
+              project: {{ .Values.namespace }}
+              service: ray-worker
+      ports:
+        - port: 5432
+    - from:
+        - podSelector:
+            matchLabels:
+              project: {{ .Values.namespace }}
+              service: studio-ray-worker
+      ports:
+        - port: 5432
+    - from:
+        - podSelector:
+            matchLabels:
+              project: {{ .Values.namespace }}
+              service: studio-ray-head
+      ports:
+        - port: 5432
+    - from:
+        - podSelector:
+            matchLabels:
+              project: {{ .Values.namespace }}
+              service: telegraf
+      ports:
+        - port: 5432
+  podSelector:
+    matchLabels:
+      project: {{ .Values.namespace }}
+      service: db
+  policyTypes:
+    - Ingress
+    - Egress

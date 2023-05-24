@@ -1,0 +1,73 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: engine-tiny-network-policy
+  namespace: {{ .Values.namespace }}
+spec:
+  egress:
+  - ports:
+    - port: 53
+      protocol: UDP
+    - port: 53
+      protocol: TCP
+    to: []
+{{- if .Values.traffic.allowInternetAccess}}
+  - to:
+    - ipBlock:
+        cidr: 0.0.0.0/0
+        except:
+        - 192.168.0.0/16
+        - 172.16.0.0/20
+{{- end }}
+  - ports:
+    - port: 6379
+    to:
+    - podSelector:
+        matchLabels:
+          project: {{ .Values.namespace }}
+          service: redis
+  - to:
+    - podSelector:
+        matchLabels:
+          project: {{ .Values.namespace }}
+          service: minio
+    ports:
+    - port: 9000
+    - port: 9001
+  - ports:
+    - port: 8186
+    - port: 8125
+      protocol: UDP  
+    to:
+    - podSelector:
+        matchLabels:
+          project: {{ .Values.namespace }}
+          service: telegraf
+  - ports:
+    - port: 5432
+    to:
+    - podSelector:
+        matchLabels:
+          project: {{ .Values.namespace }}
+          service: db
+  - ports:
+    - port: 2702
+    to:
+    - podSelector:
+        matchLabels:
+          project: {{ .Values.namespace }}
+          service: model-registry
+  - ports: []
+    to:
+    - podSelector:
+        matchLabels:
+          project: {{ .Values.namespace }}
+          service: ray-head
+  ingress: []
+  podSelector:
+    matchLabels:
+      project: {{ .Values.namespace }}
+      service: engine-tiny
+  policyTypes:
+  - Ingress
+  - Egress

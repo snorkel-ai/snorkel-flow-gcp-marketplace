@@ -1,0 +1,139 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    always-pinned: "0"
+    service: grafana
+    project: {{ .Values.namespace }}
+    snorkel.ai/compute-type: cpu
+  name: grafana
+  namespace: {{ .Values.namespace }}
+spec:
+  strategy:
+    type: Recreate
+  replicas: 1
+  selector:
+    matchLabels:
+      service: grafana
+      project: {{ .Values.namespace }}
+  template:
+    metadata:
+      labels:
+        always-pinned: "0"
+        service: grafana
+        project: {{ .Values.namespace }}
+        snorkel.ai/compute-type: cpu
+    spec:
+{{- if .Values.affinity.binPackAlwaysPinnedPods }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: always-pinned
+                operator: In
+                values:
+                - "1"
+            topologyKey: kubernetes.io/hostname
+            namespaceSelector: {}
+{{- end }}
+      imagePullSecrets:
+        - name: regcred
+      securityContext:
+        fsGroup: 99
+        runAsUser: 99
+      containers:
+      - env:
+        - name: SERVICE_TYPE
+          value: grafana
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: INFLUXDB_V2_URL
+          value: http://influxdb:8086
+        - name: TELEGRAF_CADVISOR_URL
+          value: telegraf:8186
+        - name: INFLUXDB_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: influxdb-secret
+              key: influxdb_access_key
+        - name: INFLUXDB_BUCKET
+          valueFrom:
+            secretKeyRef:
+              name: influxdb-secret
+              key: influxdb_bucket
+        - name: GRAFANA_ADMIN_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: grafana-secret
+              key: grafana_admin_username
+        - name: GRAFANA_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: grafana-secret
+              key: grafana_admin_password
+        {{- if .Values.image.imageNames.grafana }}
+        image: {{ .Values.image.imageNames.grafana }}
+        {{- else }}
+        image: snorkelai/grafana:8.3.10c
+        {{- end }}
+        name: grafana
+        ports:
+        - containerPort: 3000
+        volumeMounts:
+        - name: grafana-datasource
+          mountPath: /etc/grafana/provisioning/datasources
+        - name: grafana-dashboard
+          mountPath: /etc/grafana/provisioning/dashboards
+        - name: grafana-dashboard-json
+          mountPath: /var/lib/grafana/dashboards
+        - name: grafana-config
+          mountPath: /etc/grafana
+        - name: grafana-notifiers-config-yaml
+          mountPath: /etc/grafana/provisioning/notifiers
+        resources:
+          requests:
+            memory: 2.0Gi
+            cpu: "1.0"
+          limits:
+            memory: 2.0Gi
+            cpu: "1.0"
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 3
+          periodSeconds: 30
+        startupProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          periodSeconds: 30
+          failureThreshold: 120
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          periodSeconds: 30
+      volumes:
+      - name: grafana-datasource
+        configMap:
+          name: grafana-datasource
+      - name: grafana-dashboard
+        configMap:
+          name: grafana-dashboard
+      - name: grafana-dashboard-json
+        configMap:
+          name: grafana-dashboard-json
+      - name: grafana-config
+        configMap:
+          name: grafana-config
+      - name: grafana-notifiers-config-yaml
+        configMap:
+          name: grafana-notifiers-config-yaml

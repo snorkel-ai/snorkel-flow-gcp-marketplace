@@ -1,0 +1,23 @@
+apiVersion: v1
+data:
+  grafana.ini: |
+    instance_name = "{{ .Values.traffic.ingresses.services.snorkelflow.urlPrefix }}.{{ .Values.traffic.ingresses.domain }}"
+
+    [security]
+    admin_user = "${GRAFANA_ADMIN_USERNAME}"
+    admin_password = "${GRAFANA_ADMIN_PASSWORD}"
+
+    [server]
+    http_port = 3000
+    root_url = "http://{{ .Values.traffic.ingresses.services.snorkelflow.urlPrefix }}.{{ .Values.traffic.ingresses.domain }}/grafana/"
+    serve_from_sub_path = true
+
+    [alerting]
+    enabled = true
+
+    [unified_alerting]
+    enabled = false
+kind: ConfigMap
+metadata:
+  name: grafana-config
+  namespace: {{ .Values.namespace }}

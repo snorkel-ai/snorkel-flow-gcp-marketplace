@@ -1,0 +1,127 @@
+x-google-marketplace:
+  schemaVersion: v2
+
+  applicationApiVersion: v1beta1
+  # The published version is required and MUST match the tag
+  # of the deployer image
+  publishedVersion: '0.76.12'
+  publishedVersionMetadata:
+    releaseNote: 'Snorkel Flow GCP Marketplace Deployer'
+  clusterConstraints:
+    resources:
+    - replicas: 6
+      requests:
+        cpu: 16
+        memory: 64Gi
+  images:
+    postgres:
+      properties:
+        image.imageNames.postgres:
+          type: FULL
+    engine:
+      properties:
+        image.imageNames.engine:
+          type: FULL
+    envoy:
+      properties:
+        image.imageNames.envoy:
+          type: FULL
+    flow-ui:
+      properties:
+        image.imageNames.flowUi:
+          type: FULL
+    grafana:
+      properties:
+        image.imageNames.grafana:
+          type: FULL
+    influxdb:
+      properties:
+        image.imageNames.influxdb:
+          type: FULL
+    minio:
+      properties:
+        image.imageNames.minio:
+          type: FULL
+    model-registry:
+      properties:
+        image.imageNames.modelRegistry:
+          type: FULL
+    notebook:
+      properties:
+        image.imageNames.notebook:
+          type: FULL
+    redis:
+      properties:
+        image.imageNames.redis:
+          type: FULL
+    secrets-generator:
+      properties:
+        image.imageNames.secretsGenerator:
+          type: FULL
+    studio-api:
+      properties:
+        image.imageNames.studio:
+          type: FULL
+    telegraf:
+      properties:
+        image.imageNames.telegraf:
+          type: FULL
+    tdm-api:
+      properties:
+        image.imageNames.tdm:
+          type: FULL
+  deployerServiceAccount:
+    description: "Creates app resources, including a PersistentVolume (PV)."
+    roles:
+    - type: ClusterRole
+      rulesType: CUSTOM
+      rules:
+      - apiGroups: [""]
+        resources: ["persistentvolumes"]
+        verbs: ["*"]
+      - apiGroups: [""]
+        resources: ["persistentvolumeclaims"]
+        verbs: ["*"]
+
+properties:
+  name:
+    type: string
+    x-google-marketplace:
+      type: NAME
+  namespace:
+    type: string
+    x-google-marketplace:
+      type: NAMESPACE
+  services.jupyterhub.enabled:
+    type: boolean
+    default: false
+  volumes.snorkelflowData.storageClass:
+    type: string
+    title: "Data Volume Storage Class"
+    description: "Storage class for Snorkel Flow data volume, must be RWX compatiable"
+    default: "standard-rwx"
+  volumes.snorkelflowData.storageRequest:
+    type: string
+    title: "Data Volume Storage Request"
+    description: "Storage request for Snorkel Flow data volume, minimum 1TB"
+    default: '1205Gi'
+  projectName:  
+    type: string
+    default: $TAG
+  secretsGenerator.serviceAccount:
+    type: string
+    x-google-marketplace:
+      type: SERVICE_ACCOUNT
+      serviceAccount:
+        description: "Creates secrets for the deployment"
+        roles:
+        - type: ClusterRole
+          rulesType: CUSTOM
+          rules:
+          - apiGroups: [""]
+            resources: ["secrets"]
+            verbs: ["get", "watch", "list", "create"]
+
+required:
+- name
+- namespace

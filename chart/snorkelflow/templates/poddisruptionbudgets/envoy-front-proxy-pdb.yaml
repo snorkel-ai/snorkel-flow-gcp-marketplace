@@ -1,0 +1,10 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: envoy-front-proxy-pdb
+  namespace: {{ .Values.namespace }}
+spec:
+  maxUnavailable: 0
+  selector:
+    matchLabels:
+      service: envoy-front-proxy

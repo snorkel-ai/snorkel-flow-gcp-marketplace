@@ -1,0 +1,197 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    always-pinned: "0"
+    service: engine
+    project: {{ .Values.namespace }}
+    snorkel.ai/compute-type: cpu
+  name: engine
+  namespace: {{ .Values.namespace }}
+spec:
+  strategy:
+    type: Recreate
+{{- if eq .Values.autoscaling.worker_autoscaling "1" }}
+  replicas: 0
+{{- else if .Values.services.engine.max_replicas }}
+  replicas: {{ .Values.services.engine.max_replicas }}
+{{- else }}
+  replicas: 1
+{{- end }}
+  selector:
+    matchLabels:
+      service: engine
+      project: {{ .Values.namespace }}
+  template:
+    metadata:
+      labels:
+        always-pinned: "0"
+        service: engine
+        project: {{ .Values.namespace }}
+        snorkel.ai/compute-type: cpu
+    spec:
+{{- if .Values.affinity.binPackAlwaysPinnedPods }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: always-pinned
+                operator: In
+                values:
+                - "1"
+            topologyKey: kubernetes.io/hostname
+            namespaceSelector: {}
+{{- end }}
+      imagePullSecrets:
+        - name: regcred
+      securityContext:
+        runAsUser: 99
+        fsGroup: 99
+{{- if .Values.services.jupyterhub.enabled }}
+      serviceAccountName: snorkelflow-internal-k8s-rw-sa
+{{- end }}
+      containers:
+        - env:
+            - name: SERVICE_TYPE
+              value: engine
+            - name: IS_GPU_ENABLED
+              value: "0"
+            - name: SNORKEL_FLOW_VERSION
+              value: "{{ .Values.version }}"
+            - name: NUM_WORKERS_TINY
+              value: "0"
+            - name: NUM_WORKERS_SMALL
+              value: "4"
+            - name: NUM_WORKERS_LARGE
+              value: "1"
+            - name: NUM_WORKERS_MODEL_SMALL
+              value: "0"
+            - name: NUM_WORKERS_MODEL_LARGE
+              value: "0"
+            - name: DASK_DISTRIBUTED__ADMIN__LOG_FORMAT
+              value: "%(levelname)s %(asctime)s.%(msecs).03d %(processName)s %(threadName)s %(name)s %(filename)s:%(lineno)d %(message)s"
+            - name: DASK_DISTRIBUTED__WORKER__PROFILE__INTERVAL
+              value: "1d"
+            - name: DASK_DISTRIBUTED__WORKER__PROFILE__CYCLE
+              value: "1d"
+            - name: ENABLE_ROUTINE_ANALYZE
+              value: "True"
+            - name: DB_MINCONN
+              value: "9"
+            - name: DB_MAXCONN
+              value: "19"
+{{- if eq .Values.autoscaling.worker_autoscaling "1" }}
+            - name: POD_AUTOSCALING_ENABLED
+              value: "1"
+            - name: RAY_WORKER_REPLICA_DEFAULT_COUNT
+              value: {{ .Values.services.rayWorker.max_replicas | quote }}
+{{- else }}
+            - name: POD_AUTOSCALING_ENABLED
+              value: "0"
+            - name: RAY_WORKER_REPLICA_DEFAULT_COUNT
+              value: "2"
+{{- end }}
+            - name: ENABLE_IPV6
+              value: "False"
+            - name: SSO_HOST_IP
+              value: {{ .Values.traffic.ingresses.services.snorkelflow.urlPrefix }}.{{ .Values.traffic.ingresses.domain }}
+            - name: ENABLE_PRETRAINED_MODEL_DIRECTORY
+              value: "False"
+            - name: LD_PRELOAD
+              value: /usr/lib/x86_64-linux-gnu/libjemalloc.so.2
+            - name: MALLOC_CONF
+              value: background_thread:true
+            - name: MALLOC_MMAP_THRESHOLD_
+              value: "16384"
+            - name: SNORKELFLOW_MOUNT_DIR
+              value: /data
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: REDIS_URL
+              value: redis
+            - name: MINIO_URL
+              value: http://minio:9001
+            - name: TELEGRAF_CADVISOR_URL
+              value: telegraf:8186
+            - name: TELEGRAF_URL
+              value: http://telegraf:8125
+            - name: TDM_CONN_STR
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: tdm_conn_str
+            - name: INFLUXDB_V2_URL
+              value: http://influxdb:8086
+            - name: MODEL_REGISTRY_URL
+              value: http://model-registry:2702
+            - name: MINIO_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: minio-secret
+                  key: minio_access_key
+            - name: MINIO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: minio-secret
+                  key: minio_secret_key
+            - name: INFLUXDB_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: influxdb-secret
+                  key: influxdb_access_key
+            - name: INFLUXDB_BUCKET
+              valueFrom:
+                secretKeyRef:
+                  name: influxdb-secret
+                  key: influxdb_bucket
+{{- if .Values.services.engine.env.POPULATOR_EXTERNAL_STORAGE }}
+            - name: POPULATOR_EXTERNAL_STORAGE
+              value: "{{ .Values.services.engine.env.POPULATOR_EXTERNAL_STORAGE }}"
+{{- end }}
+{{- if .Values.services.engine.env.SENTRY_DSN }}
+            - name: SENTRY_DSN
+              value: "{{ .Values.services.engine.env.SENTRY_DSN }}"
+{{- end }}
+{{- if .Values.services.engine.env.SENTRY_ENVIRONMENT }}
+            - name: SENTRY_ENVIRONMENT
+              value: "{{ .Values.services.engine.env.SENTRY_ENVIRONMENT }}"
+{{- end }}
+{{- if .Values.image.imageNames.engine }}
+          image: {{ .Values.image.imageNames.engine }}
+{{- else if .Values.gpu.enabled }}
+          image: snorkelai/engine:{{ .Values.version }}-cuda
+{{- else}}
+          image: snorkelai/engine:{{ .Values.version }}
+{{- end }}
+          name: engine
+          args:
+            - worker
+            - --host
+            - 0.0.0.0
+          ports: []
+          volumeMounts:
+            - mountPath: /data
+              name: data
+            - mountPath: /etc/auth/jwt
+              name: jwt-key-pub
+          resources:
+            requests:
+              memory: 64.0Gi
+              cpu: "16.0"
+            limits:
+              memory: 64.0Gi
+              cpu: "16.0"
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ .Values.namespace }}-data
+        - name: jwt-key-pub
+          secret:
+            secretName: jwt-key-pub

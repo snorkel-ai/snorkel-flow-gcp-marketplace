@@ -1,0 +1,117 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    always-pinned: "0"
+    service: flow-ui
+    project: {{ .Values.namespace }}
+    snorkel.ai/compute-type: cpu
+  name: flow-ui
+  namespace: {{ .Values.namespace }}
+spec:
+  strategy:
+    type: Recreate
+  replicas: 1
+  selector:
+    matchLabels:
+      service: flow-ui
+      project: {{ .Values.namespace }}
+  template:
+    metadata:
+      labels:
+        always-pinned: "0"
+        service: flow-ui
+        project: {{ .Values.namespace }}
+        snorkel.ai/compute-type: cpu
+    spec:
+{{- if .Values.affinity.binPackAlwaysPinnedPods }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: always-pinned
+                operator: In
+                values:
+                - "1"
+            topologyKey: kubernetes.io/hostname
+            namespaceSelector: {}
+{{- end }}
+      imagePullSecrets:
+        - name: regcred
+      securityContext:
+        runAsUser: 99
+        fsGroup: 99
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: {{ .Values.namespace }}-data
+      containers:
+      - env:
+        - name: SERVICE_TYPE
+          value: flow-ui
+        - name: SNORKEL_FLOW_VERSION
+          value: "{{ .Values.version }}"
+        - name: SNORKELFLOW_MOUNT_DIR
+          value: /data
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: STUDIO_API_URL
+          value: http://studio-api:8484
+        - name: TDM_API_URL
+          value: http://tdm-api:8686
+        - name: TELEGRAF_CADVISOR_URL
+          value: telegraf:8186
+        - name: TELEGRAF_URL
+          value: http://telegraf:8125
+{{- if .Values.services.flowUi.env.SENTRY_DSN }}
+        - name: SENTRY_DSN
+          value: "{{ .Values.services.flowUi.env.SENTRY_DSN }}"
+{{- end }}
+{{- if .Values.services.flowUi.env.SENTRY_ENVIRONMENT }}
+        - name: SENTRY_ENVIRONMENT
+          value: "{{ .Values.services.flowUi.env.SENTRY_ENVIRONMENT }}"
+{{- end }}
+        {{- if .Values.image.imageNames.flowUi }}
+        image: {{ .Values.image.imageNames.flowUi }}
+        {{- else if .Values.gpu.enabled }}
+        image: snorkelai/flow-ui:{{ .Values.version }}-cuda
+        {{- else}}
+        image: snorkelai/flow-ui:{{ .Values.version }}
+        {{- end }}
+        name: flow-ui
+        ports:
+        - containerPort: 5000
+        volumeMounts:
+        - mountPath: /data
+          name: data
+        resources:
+          requests:
+            memory: 4.0Gi
+            cpu: "2.0"
+          limits:
+            memory: 4.0Gi
+            cpu: "2.0"
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 5000
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 5000
+          periodSeconds: 30
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 5000
+          periodSeconds: 30
+          failureThreshold: 120

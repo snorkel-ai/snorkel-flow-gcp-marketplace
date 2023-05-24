@@ -1,0 +1,17 @@
+{{- if .Values.volumes.jupyterhub.persistentVolume.enabled }}
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ .Values.namespace }}-jupyterhub-pv
+spec:
+  accessModes:
+  - ReadWriteOnce
+  capacity:
+    storage: {{ .Values.volumes.jupyterhub.storageRequest }}
+{{- if .Values.volumes.jupyterhub.persistentVolume.driver }}
+{{ toYaml .Values.volumes.jupyterhub.persistentVolume.driver | indent 2 }}
+{{- end }}
+  storageClassName: {{ .Values.volumes.jupyterhub.storageClass }}
+  persistentVolumeReclaimPolicy: Retain
+  volumeMode: Filesystem
+{{- end }}

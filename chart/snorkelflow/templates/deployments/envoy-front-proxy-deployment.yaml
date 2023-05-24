@@ -1,0 +1,139 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    always-pinned: "0"
+    service: envoy-front-proxy
+    project: {{ .Values.namespace }}
+    snorkel.ai/compute-type: cpu
+  name: envoy-front-proxy
+  namespace: {{ .Values.namespace }}
+spec:
+  strategy:
+    type: Recreate
+  replicas: 1
+  selector:
+    matchLabels:
+      service: envoy-front-proxy
+      project: {{ .Values.namespace }}
+  template:
+    metadata:
+      labels:
+        always-pinned: "0"
+        service: envoy-front-proxy
+        project: {{ .Values.namespace }}
+        snorkel.ai/compute-type: cpu
+    spec:
+{{- if .Values.affinity.binPackAlwaysPinnedPods }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: always-pinned
+                operator: In
+                values:
+                - "1"
+            topologyKey: kubernetes.io/hostname
+            namespaceSelector: {}
+{{- end }}
+      imagePullSecrets:
+        - name: regcred
+      securityContext:
+        runAsUser: 99
+      volumes:
+      - configMap:
+          name: envoy-front-proxy-envoy-front-proxy-json-config-map
+        name: envoy-front-proxy-envoy-front-proxy-json-volume
+      - secret:
+          secretName: {{ .Values.traffic.tls.key_secret_name }}
+        name: envoy-front-proxy-envoy-tls-key-pem-volume
+      - secret:
+          secretName: {{ .Values.traffic.tls.cert_secret_name }}
+        name: envoy-front-proxy-envoy-tls-cert-pem-volume
+      containers:
+      - args:
+        - 'envoy'
+        - '-c'
+        - '/etc/envoy/config/envoy-front-proxy.json'
+        env:
+        - name: SERVICE_TYPE
+          value: envoy-front-proxy
+        - name: ENVOY_CONFIG_VERSION
+          value: "2"
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: TDM_API_URL
+          value: http://tdm-api:8686
+        - name: STUDIO_API_URL
+          value: http://studio-api:8484
+        - name: NOTEBOOK_URL
+          value: http://notebook:8282
+        - name: MINIO_URL
+          value: http://minio:9001
+        - name: GRAFANA_URL
+          value: http://grafana:3000
+{{- if .Values.services.jupyterhub.enabled }}
+        - name: JUPYTERHUB_URL
+          value: http://jupyterhub-proxy:8001
+{{- end }}
+        - name: FLOW_UI_URL
+          value: http://flow-ui:5000
+        - name: TELEGRAF_CADVISOR_URL
+          value: telegraf:8186
+        {{- if .Values.image.imageNames.envoy }}
+        image: {{ .Values.image.imageNames.envoy }}
+        {{- else }}
+        image: snorkelai/envoy:v1.21.0j
+        {{- end }}
+        name: envoy-front-proxy
+        ports:
+        - containerPort: 18686
+        - containerPort: 18484
+        - containerPort: 18888
+        - containerPort: 18989
+        - containerPort: 18990
+        - containerPort: 30000
+{{- if .Values.services.jupyterhub.enabled }}
+        - containerPort: 18000
+{{- end }}
+        - containerPort: 1443
+        - containerPort: 1080
+        - containerPort: 9901
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 9901
+          initialDelaySeconds: 3
+          periodSeconds: 30
+        startupProbe:
+          httpGet:
+            path: /ready
+            port: 9901
+          periodSeconds: 30
+          failureThreshold: 120
+        livenessProbe:
+          httpGet:
+            path: /ready
+            port: 9901
+          periodSeconds: 30
+        resources:
+          limits:
+            cpu: '1.0'
+            memory: 2.0Gi
+          requests:
+            cpu: '1.0'
+            memory: 2.0Gi
+        volumeMounts:
+        - mountPath: /etc/envoy/config
+          name: envoy-front-proxy-envoy-front-proxy-json-volume
+        - mountPath: /etc/envoy/key
+          name: envoy-front-proxy-envoy-tls-key-pem-volume
+        - mountPath: /etc/envoy/cert
+          name: envoy-front-proxy-envoy-tls-cert-pem-volume

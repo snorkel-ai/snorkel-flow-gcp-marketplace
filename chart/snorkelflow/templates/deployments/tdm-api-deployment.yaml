@@ -1,0 +1,256 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    always-pinned: "0"
+    service: tdm-api
+    project: {{ .Values.namespace }}
+    snorkel.ai/compute-type: cpu
+  name: tdm-api
+  namespace: {{ .Values.namespace }}
+spec:
+  strategy:
+    type: Recreate
+  replicas: 1
+  selector:
+    matchLabels:
+      service: tdm-api
+      project: {{ .Values.namespace }}
+  template:
+    metadata:
+      labels:
+        always-pinned: "0"
+        service: tdm-api
+        project: {{ .Values.namespace }}
+        snorkel.ai/compute-type: cpu
+    spec:
+{{- if .Values.affinity.binPackAlwaysPinnedPods }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: always-pinned
+                operator: In
+                values:
+                - "1"
+            topologyKey: kubernetes.io/hostname
+            namespaceSelector: {}
+{{- end }}
+      imagePullSecrets:
+        - name: regcred
+      securityContext:
+        runAsUser: 99
+        fsGroup: 99
+{{- if .Values.services.jupyterhub.enabled }}
+      serviceAccountName: snorkelflow-internal-k8s-rw-sa
+{{- end }}
+      containers:
+      - env:
+        - name: SERVICE_TYPE
+          value: tdm-api
+        - name: SNORKEL_FLOW_VERSION
+          value: "{{ .Values.version }}"
+        - name: NOTEBOOK_API_KEY
+          value: dummy-key
+        - name: NOTEBOOK_TYPE
+{{- if .Values.services.jupyterhub.enabled }}
+          value: JUPYTERHUB
+{{- else }}
+          value: LEGACY
+{{- end }}
+        - name: MINIO_IP
+          value: {{ .Values.traffic.ingresses.services.minio.urlPrefix }}.{{ .Values.traffic.ingresses.domain }}
+        - name: MINIO_INGRESS_PORT
+          value: '80'
+        - name: MINIO_TLS_INGRESS_PORT
+          value: '443'
+        - name: DB_MINCONN
+          value: "128"
+        - name: DB_MAXCONN
+          value: "256"
+        - name: SSO_HOST_IP
+          value: {{ .Values.traffic.ingresses.services.snorkelflow.urlPrefix }}.{{ .Values.traffic.ingresses.domain }}
+        - name: ENABLE_IPV6
+          value: "False"
+        - name: ENABLE_PRETRAINED_MODEL_DIRECTORY
+          value: "False"
+        - name: RAY_HEAD_URL
+          value: "ray://ray-head:10001"
+        - name: RAY_HEAD_REDIS_PORT
+          value: "7379"
+        - name: NUM_WORKERS_TINY
+          value: "4"
+        - name: NUM_WORKERS_SMALL
+          value: "4"
+        - name: NUM_WORKERS_LARGE
+          value: "1"
+        - name: NUM_WORKERS_MODEL_SMALL
+          value: "4"
+        - name: NUM_WORKERS_MODEL_LARGE
+          value: "1"
+        - name: LD_PRELOAD
+          value: /usr/lib/x86_64-linux-gnu/libjemalloc.so.2
+        - name: MALLOC_CONF
+          value: background_thread:true
+        - name: MALLOC_MMAP_THRESHOLD_
+          value: "16384"
+{{- if eq .Values.autoscaling.worker_autoscaling "1" }}
+        - name: MODEL_TRAINER_REPLICA_DEFAULT_COUNT
+          value: {{ .Values.services.modelTrainer.max_replicas | quote }}
+        - name: ENGINE_REPLICA_DEFAULT_COUNT
+          value: {{ .Values.services.engine.max_replicas | quote }}
+        - name: RAY_WORKER_REPLICA_DEFAULT_COUNT
+          value: {{ .Values.services.rayWorker.max_replicas | quote }}
+        - name: POD_AUTOSCALING_ENABLED
+          value: "1"
+{{- else }}
+        - name: MODEL_TRAINER_REPLICA_DEFAULT_COUNT
+          value: "1"
+        - name: ENGINE_REPLICA_DEFAULT_COUNT
+          value: "1"
+        - name: RAY_WORKER_REPLICA_DEFAULT_COUNT
+          value: "2"
+        - name: POD_AUTOSCALING_ENABLED
+          value: "0"
+{{- end }}
+{{- if eq .Values.autoscaling.cluster_autoscaling.pod_disruption_budget_toggling "1" }}
+        - name: PDB_TOGGLING_ENABLED
+          value: "1"
+{{- else }}
+        - name: PDB_TOGGLING_ENABLED
+          value: "0"
+{{- end }}
+        - name: BUSINESS_HOUR_START_UTC
+          value: {{ .Values.autoscaling.cluster_autoscaling.business_hour_start_utc | quote }}
+        - name: BUSINESS_HOUR_END_UTC
+          value: {{ .Values.autoscaling.cluster_autoscaling.business_hour_end_utc | quote}}
+        - name: SNORKELFLOW_MOUNT_DIR
+          value: /data
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: REDIS_URL
+          value: redis
+        - name: MINIO_URL
+          value: http://minio:9001
+        - name: TDM_CONN_STR
+          valueFrom:
+            secretKeyRef:
+              name: db-secret
+              key: tdm_conn_str
+        - name: INFLUXDB_V2_URL
+          value: http://influxdb:8086
+        - name: TELEGRAF_CADVISOR_URL
+          value: telegraf:8186
+        - name: TELEGRAF_URL
+          value: http://telegraf:8125
+        - name: NOTEBOOK_URL
+          value: http://notebook:8282
+        - name: MODEL_REGISTRY_URL
+          value: http://model-registry:2702
+        - name: INFLUXDB_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: influxdb-secret
+              key: influxdb_access_key
+        - name: INFLUXDB_BUCKET
+          valueFrom:
+            secretKeyRef:
+              name: influxdb-secret
+              key: influxdb_bucket
+{{- if .Values.services.jupyterhub.enabled }}
+        - name: JUPYTERHUB_OAUTH_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: jupyterhub-oidc-secret
+              key: client_secret
+{{- end }}
+{{- if .Values.authentication.oidc.enabled }}
+        envFrom:
+        - configMapRef:
+            name: oidc-configmap
+{{- end }}
+{{- if .Values.services.tdmApi.env.POPULATOR_EXTERNAL_STORAGE }}
+        - name: POPULATOR_EXTERNAL_STORAGE
+          value: "{{ .Values.services.tdmApi.env.POPULATOR_EXTERNAL_STORAGE }}"
+{{- end }}
+{{- if .Values.services.tdmApi.env.SENTRY_DSN }}
+        - name: SENTRY_DSN
+          value: "{{ .Values.services.tdmApi.env.SENTRY_DSN }}"
+{{- end }}
+{{- if .Values.services.tdmApi.env.SENTRY_ENVIRONMENT }}
+        - name: SENTRY_ENVIRONMENT
+          value: "{{ .Values.services.tdmApi.env.SENTRY_ENVIRONMENT }}"
+{{- end }}
+        args:
+        - --port
+        - "8686"
+        - --host
+        - 0.0.0.0
+        {{- if .Values.image.imageNames.tdm }}
+        image: {{ .Values.image.imageNames.tdm }}
+        {{- else if .Values.gpu.enabled }}
+        image: snorkelai/tdm-api:{{ .Values.version }}-cuda
+        {{- else }}
+        image: snorkelai/tdm-api:{{ .Values.version }}
+        {{- end }}
+        name: tdm-api
+        ports:
+        - containerPort: 8686
+        volumeMounts:
+        - mountPath: /data
+          name: data
+        - mountPath: /etc/auth/jwt
+          name: jwt-key-pub
+        - mountPath: /etc/auth/jwt_priv
+          name: jwt-key
+        - mountPath: /etc/auth/sso
+          name: sso-key-cert
+        - mountPath: /etc/auth/sso_priv
+          name: sso-key
+        resources:
+          requests:
+            memory: 16.0Gi
+            cpu: "4.0"
+          limits:
+            memory: 16.0Gi
+            cpu: "4.0"
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8686
+          initialDelaySeconds: 3
+          periodSeconds: 30
+        startupProbe:
+          httpGet:
+            path: /
+            port: 8686
+          periodSeconds: 30
+          failureThreshold: 240
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8686
+          periodSeconds: 30
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: {{ .Values.namespace }}-data
+      - name: jwt-key-pub
+        secret:
+          secretName: jwt-key-pub
+      - name: jwt-key
+        secret:
+          secretName: jwt-key
+      - name: sso-key-cert
+        secret:
+          secretName: sso-key-cert
+      - name: sso-key
+        secret:
+          secretName: sso-key

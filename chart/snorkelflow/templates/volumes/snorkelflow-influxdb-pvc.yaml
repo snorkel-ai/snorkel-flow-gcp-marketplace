@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.namespace }}-influxdb
+  namespace: {{ .Values.namespace }}
+{{- if .Values.volumes.influxdb.storageClass }}
+  annotations:
+    volume.beta.kubernetes.io/storage-class: "{{ .Values.volumes.influxdb.storageClass }}"
+{{- end }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.volumes.influxdb.storageRequest }}
+{{- if .Values.volumes.influxdb.storageClass }}
+  storageClassName: {{ .Values.volumes.influxdb.storageClass }}
+{{- end }}
+{{- if .Values.volumes.influxdb.persistentVolume.enabled }}
+  volumeName: {{ .Values.namespace }}-influxdb-pv
+{{- else if .Values.volumes.influxdb.volumeName }}
+  volumeName: {{ .Values.volumes.influxdb.volumeName }}
+{{- end }}

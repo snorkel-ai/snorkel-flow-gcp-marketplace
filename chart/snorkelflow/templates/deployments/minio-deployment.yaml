@@ -1,0 +1,117 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    always-pinned: "0"
+    service: minio
+    project: {{ .Values.namespace }}
+    snorkel.ai/compute-type: cpu
+  name: minio
+  namespace: {{ .Values.namespace }}
+spec:
+  strategy:
+    type: Recreate
+  replicas: 1
+  selector:
+    matchLabels:
+      service: minio
+      project: {{ .Values.namespace }}
+  template:
+    metadata:
+      labels:
+        always-pinned: "0"
+        service: minio
+        project: {{ .Values.namespace }}
+        snorkel.ai/compute-type: cpu
+    spec:
+{{- if .Values.affinity.binPackAlwaysPinnedPods }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: always-pinned
+                operator: In
+                values:
+                - "1"
+            topologyKey: kubernetes.io/hostname
+            namespaceSelector: {}
+{{- end }}
+      imagePullSecrets:
+        - name: regcred
+      securityContext:
+        runAsUser: 99
+        fsGroup: 99
+      containers:
+      - env:
+        - name: SERVICE_TYPE
+          value: minio
+        - name: SNORKELFLOW_MOUNT_DIR
+          value: /data
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: TELEGRAF_CADVISOR_URL
+          value: telegraf:8186
+        - name: MINIO_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: minio-secret
+              key: minio_access_key
+        - name: MINIO_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: minio-secret
+              key: minio_secret_key
+        args:
+        - server
+        - /data
+        - --console-address
+        - :9000
+        - --address
+        - :9001
+        {{- if .Values.image.imageNames.minio }}
+        image: {{ .Values.image.imageNames.minio }}
+        {{- else }}
+        image: snorkelai/minio:RELEASE.2022-03-03T21-21-16Zi
+        {{- end }}
+        name: minio
+        ports:
+          - containerPort: 9000
+          - containerPort: 9001
+        resources:
+          requests:
+            memory: 2.0Gi
+            cpu: "1.0"
+          limits:
+            memory: 2.0Gi
+            cpu: "1.0"
+        readinessProbe:
+          httpGet:
+            path: /minio/health/live
+            port: 9000
+          initialDelaySeconds: 3
+          periodSeconds: 30
+        startupProbe:
+          httpGet:
+            path: /minio/health/live
+            port: 9000
+          periodSeconds: 30
+          failureThreshold: 120
+        livenessProbe:
+          httpGet:
+            path: /minio/health/live
+            port: 9000
+          periodSeconds: 30
+        volumeMounts:
+        - mountPath: /data
+          name: data
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: {{ .Values.namespace }}-data

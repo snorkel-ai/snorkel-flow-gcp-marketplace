@@ -1,0 +1,21 @@
+actions:
+- name: Flow UI 200 OK (service DNS) + Title Renders
+  httpTest:
+    url: http://flow-ui.{{ .Env.NAMESPACE }}.svc.cluster.local:5000
+    expect:
+      statusCode:
+        equals: 200
+      bodyText:
+        html:
+          title:
+            equals: 'Snorkel Flow'
+- name: Grafana UI 200 OK (service DNS) + Title Renders
+  httpTest:
+    url: http://grafana.{{ .Env.NAMESPACE }}.svc.cluster.local:3000
+    expect:
+      statusCode:
+        equals: 200
+      bodyText:
+        html:
+          title:
+            equals: 'Grafana'

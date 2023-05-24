@@ -1,0 +1,29 @@
+{{- if and .Values.traffic.istio.enabled .Values.traffic.ingresses.services.influxdb.enabled }}
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: {{ .Values.namespace }}-influxdb-vs
+  namespace: {{ .Values.namespace }}
+{{- if .Values.traffic.ingresses.services.influxdb.annotations }}
+  annotations:
+{{ toYaml .Values.traffic.ingresses.services.influxdb.annotations | indent 4 }}
+{{- end }}
+spec:
+  gateways:
+{{- if .Values.traffic.istio.gateway.create }}
+  - {{ .Values.namespace }}/{{ .Values.namespace }}-gateway
+{{- else }}
+  - {{ .Values.traffic.istio.gateway.namespace }}/{{ .Values.traffic.istio.gateway.name }}
+{{- end }}
+  hosts:
+  - {{ .Values.traffic.ingresses.services.influxdb.urlPrefix }}.{{ .Values.traffic.ingresses.domain }}
+  http:
+  - match:
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        host: influxdb
+        port:
+          number: 8086
+{{- end }}

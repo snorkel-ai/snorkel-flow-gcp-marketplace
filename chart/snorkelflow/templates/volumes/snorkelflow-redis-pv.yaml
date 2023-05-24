@@ -1,0 +1,17 @@
+{{- if .Values.volumes.redis.persistentVolume.enabled }}
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ .Values.namespace }}-redis-pv
+spec:
+  accessModes:
+  - ReadWriteOnce
+  capacity:
+    storage: {{ .Values.volumes.redis.storageRequest }}
+{{- if .Values.volumes.redis.persistentVolume.driver }}
+{{ toYaml .Values.volumes.redis.persistentVolume.driver | indent 2 }}
+{{- end }}
+  storageClassName: {{ .Values.volumes.redis.storageClass }}
+  persistentVolumeReclaimPolicy: Retain
+  volumeMode: Filesystem
+{{- end }}

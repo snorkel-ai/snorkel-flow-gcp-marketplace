@@ -1,0 +1,10 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: ray-head-pdb
+  namespace: {{ .Values.namespace }}
+spec:
+  maxUnavailable: 0
+  selector:
+    matchLabels:
+      service: ray-head

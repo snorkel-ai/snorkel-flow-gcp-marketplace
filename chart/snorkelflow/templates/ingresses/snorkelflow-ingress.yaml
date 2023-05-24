@@ -1,0 +1,35 @@
+{{- if and .Values.traffic.ingresses.services.snorkelflow.enabled (not .Values.traffic.istio.enabled) }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Values.namespace }}-ingress
+  namespace: {{ .Values.namespace }}
+{{- if or .Values.traffic.ingresses.annotations .Values.traffic.ingresses.services.snorkelflow.annotations }}
+  annotations:
+{{ toYaml (merge .Values.traffic.ingresses.services.snorkelflow.annotations .Values.traffic.ingresses.annotations) | indent 4 }}
+{{- end }}
+spec:
+{{- if .Values.traffic.ingresses.ingressClassName }}
+  ingressClassName: {{ .Values.traffic.ingresses.ingressClassName }}
+{{- end }}
+{{- if .Values.traffic.ingresses.tlsHosts }}
+  tls:
+  - hosts:
+      - {{ .Values.traffic.ingresses.services.snorkelflow.urlPrefix }}.{{ .Values.traffic.ingresses.domain }}
+{{- end }}
+  rules:
+  {{- if .Values.traffic.ingresses.domain }}
+  - host: {{ .Values.traffic.ingresses.services.snorkelflow.urlPrefix }}.{{ .Values.traffic.ingresses.domain }}
+    http:
+  {{- else }}
+  - http:
+  {{- end}}
+      paths:
+      - backend:
+          service:
+            name: envoy-front-proxy
+            port:
+              number: 1080
+        path: /
+        pathType: Prefix
+{{- end }}

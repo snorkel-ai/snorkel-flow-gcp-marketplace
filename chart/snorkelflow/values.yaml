@@ -1,0 +1,276 @@
+# The project name is also the name of the Kubernetes namespace
+projectName: snorkelflow
+version: 0.76.12
+image:
+  # Configure an imagePullSecret
+  # imagePullSecret: regcred
+  # Configure custom image names for each service running with
+  # Snorkel Flow.
+  imageNames: {}
+    # postgres: "snorkelai/postgres:11.16.1i"
+    # engine: "snorkelai/engine:0.65.24"
+    # envoy: "snorkelai/envoy:v1.21.0j"
+    # flowUi: "snorkelai/flow-ui:0.65.24"
+    # grafana: "snorkelai/grafana:8.3.10c"
+    # influxdb: "snorkelai/influxdb:2.2.0k"
+    # jupyterhub: "snorkelai/jupyterhub:1.2.0j"
+    # jupyterhubProxy: "snorkelai/jupyterhub-proxy:4.5.3c"
+    # minio: "snorkelai/minio:RELEASE.2022-03-03T21-21-16Zj"
+    # modelRegistry: "snorkelai/model-registry:0.65.24"
+    # notebook: "snorkelai/notebook:0.65.24"
+    # redis: "snorkelai/redis:5.0.13k"
+    # secretsGenerator: "snorkelai/secrets-generator:0.6.0"
+    # singleuserNotebook: "snorkelai/singleuser-notebook"
+    # studio: "snorkelai/studio-api:0.65.24"
+    # telegraf: "snorkelai/telegraf:1.21.4n"
+    # tdm: "snorkelai/tdm-api:0.65.24"
+# Add a pagerduty key here to setup a notifier for Grafana to PagerDuty
+pagerduty_key: PAGERDUTY_KEY
+affinity:
+  # set to true to specify affinity in deployments for bin-packing purposes
+  binPackAlwaysPinnedPods: false
+autoscaling:
+  # set to "1" to turn on up/down autoscaling for workers pods (engine, model-trainer, ray-worker)
+  worker_autoscaling: "0"  # replica limits for pod autoscaling are defined in services.SERVICE.max_replicas
+  cluster_autoscaling:
+    # set to "1" to turn on toggling for pod disruption budgets for non-worker pods (i.e. allow those pods to be moved on/off nodes during non-business hours for cluster autoscaling purposes)
+    pod_disruption_budget_toggling: "0"
+    business_hour_start_utc: 11
+    business_hour_end_utc: 4
+traffic:
+  istio:
+    enabled: false
+    gateway:
+      create: true
+      # Used to specify existing gateway when create is false
+      # name: snorkelflow-gateway
+      # namespace: snorkelflow
+  # Configure urls and domain. Snorkel Flow urls will be {urls.service}.{domain}
+  # e.g. snorkelflow.snorkel-ai.com
+  ingresses:
+    domain: snorkel-ai.com
+    # The ServiceType for services that require an ingress (e.g. ClusterIP, NodePort)
+    # https://kubernetes.io/docs/concepts/services-networking/service/
+    serviceType: ClusterIP
+    # Specify the cloud provider the ingresses are for or leave blank otherwise.
+    # Currently supported providers: gcp
+    cloudProvider: gcp
+    # By default, do not generate tls hosts for ingresses
+    tlsHosts: false
+    annotations:
+      kubernetes.io/ingress.class: "gce"
+    # global annotations that apply to all service ingresses
+    services:
+      influxdb:
+        enabled: true
+        urlPrefix: snorkelflow-influxdb
+        annotations: {}
+        # Key and values of any additional annotations needed per service
+        # e.g. nginx.org/proxy-connect-timeout: "30s"
+      minio:
+        enabled: true
+        urlPrefix: snorkelflow-minio
+        annotations: {}
+      minioApi:
+        enabled: true
+        urlPrefix: snorkelflow-minio-api
+        annotations: {}
+      snorkelflow:
+        enabled: true
+        urlPrefix: snorkelflow
+        annotations: {}
+      studio:
+        enabled: true
+        urlPrefix: snorkelflow-studio-api
+        annotations: {}
+      tdm:
+        enabled: true
+        urlPrefix: snorkelflow-tdm-api
+        annotations: {}
+  tls:
+    # Names of Kubernetes secrets that contain a single file each for use by Envoy
+    # to terminate TLS. These secrets must be present for Snorkel Flow to operate.
+    # See envoy-front-proxy-envoy-front-proxy-json-config-map.yaml for references.
+    key_secret_name: envoy-front-proxy-envoy-tls-key-pem-secret
+    cert_secret_name: envoy-front-proxy-envoy-tls-cert-pem-secret
+  # By default, permit selected services to receive all inbound traffic.
+  # You may disable this option and use the `networkPolicies.ingresses` block below to limit access
+  allowAllInboundTrafficOnKeyServices: true
+  # By default, allow pods to connect to the internet.
+  allowInternetAccess: true
+  networkPolicies:
+    ingresses:
+    # List of `from` blocks which map to ingresses for key Snorkel Flow services
+    # - from:
+    #   - podSelector:
+    #       matchLabels:
+    #         special: ingress
+gpu:
+  # Enable GPU support
+  enabled: false
+  gpu_config: {}
+    # Configure specific GPU-related taints and/or node selectors
+    # tolerations:
+    #   - effect: NoSchedule
+    #     key: GPU
+    #     operator: Equal
+    #     value: "true"
+    # node_selectors:
+    #   GPU: "true"
+namespace:
+  # Include namespace creation
+  enabled: true
+services:
+  jupyterhub:
+    # Enable the in-platform notebook
+    enabled: false
+  secretsGenerator:
+    # Enable the secrets generator job
+    enabled: true
+  # core
+  flowUi:
+     # Define non-default resource limits & requests
+    resources: {}
+    env: {}
+  engine:
+    # Define non-default resource limits & requests
+    resources: {}
+    max_replicas: 1  # this is the replica limit, the actual replica count is set to 0 when templating if pod_autoscaling is turned on
+    env: {}
+  modelTrainer:
+    # Define non-default resource limits & requests
+    resources: {}
+    max_replicas: 1  # this is the replica limit, the actual replica count is set to 0 when templating if pod_autoscaling is turned on
+    env: {}
+      # NUM_WORKERS_MODEL_SMALL: 4
+  rayWorker:
+    # Define non-default resource limits & requests
+    resources: {}
+    max_replicas: 2  # this is the replica limit, the actual replica count is set to 0 when templating if pod_autoscaling is turned on
+    env: {}
+  studioApi:
+    # Define non-default resource limits & requests
+    resources: {}
+    env: {}
+      # DB_MINCONN: 49
+      # DB_MAXCONN: 98
+      # STUDIO_API_NUM_RQ_WORKERS: 8
+      # STUDIO_GUNICORN_WORKERS: 4
+  studioDask:
+    # Define non-default resource limits & requests
+    resources: {}
+    env: {}
+  tdmApi:
+    # Define non-default resource limits & requests
+    resources: {}
+    env: {}
+volumes:
+  snorkelflowData:
+    # Configure the storageclass for the ReadWriteMany volume, which is typically a
+    # NFS volume.
+    storageClass: "aws-efs"
+    storageRequest: 50Gi
+    # Configure the volumeName for the ReadWriteMany volume if using a specific volume.
+    # If creation of the PersistentVolume is enabled, this volumeName will not be used.
+    # volumeName: "snorkelflow-data-volume"
+    persistentVolume:
+      # Enable creation of the PersistentVolume associated with the PersistentVolumeClaim
+      enabled: false
+      driver: {}
+        # Spec for the driver of the PersistentVolume. We expect this to be a driver that is
+        # compatible with the ReadWriteMany access mode, e.g an NFS driver.
+        # csi:
+        #   driver: efs.csi.aws.com
+        #   volumeAttributes:
+        #     encryptInTransit: "true"
+        #   volumeHandle: fs-49874590::fsap-349874597490
+  influxdb:
+    # Configure the storageclass for the ReadWriteOnce volume, which defaults to using the default storageclass
+    # storageClass: "aws-efs"
+    storageRequest: 10Gi
+    # Configure the volumeName for the ReadWriteOnce volume if using a specific volume.
+    # If creation of the PersistentVolume is enabled, this volumeName will not be used.
+    # volumeName: "snorkelflow-influxdb-volume"
+    persistentVolume:
+      # Enable creation of the PersistentVolume associated with the PersistentVolumeClaim
+      enabled: false
+      driver: {}
+        # Spec for the driver of the PersistentVolume.
+        # csi:
+        #   driver: efs.csi.aws.com
+        #   volumeAttributes:
+        #     encryptInTransit: "true"
+        #   volumeHandle: fs-49874590::fsap-349874597490
+  postgres:
+    # Configure the storageclass for the ReadWriteOnce volume, which defaults to using the default storageclass
+    # storageClass: "aws-efs"
+    storageRequest: 10Gi
+    # Configure the volumeName for the ReadWriteOnce volume if using a specific volume.
+    # If creation of the PersistentVolume is enabled, this volumeName will not be used.
+    # volumeName: "snorkelflow-postgres-volume"
+    persistentVolume:
+      # Enable creation of the PersistentVolume associated with the PersistentVolumeClaim
+      enabled: false
+      driver: {}
+        # Spec for the driver of the PersistentVolume.
+        # csi:
+        #   driver: efs.csi.aws.com
+        #   volumeAttributes:
+        #     encryptInTransit: "true"
+        #   volumeHandle: fs-49874590::fsap-349874597490
+  redis:
+    # Configure the storageclass for the ReadWriteOnce volume, which defaults to using the default storageclass
+    # storageClass: "aws-efs"
+    storageRequest: 10Gi
+    # Configure the volumeName for the ReadWriteOnce volume if using a specific volume.
+    # If creation of the PersistentVolume is enabled, this volumeName will not be used.
+    # volumeName: "snorkelflow-redis-volume"
+    persistentVolume:
+      # Enable creation of the PersistentVolume associated with the PersistentVolumeClaim
+      enabled: false
+      driver: {}
+        # Spec for the driver of the PersistentVolume.
+        # csi:
+        #   driver: efs.csi.aws.com
+        #   volumeAttributes:
+        #     encryptInTransit: "true"
+        #   volumeHandle: fs-49874590::fsap-349874597490
+  jupyterhub:
+    # Configure the storageclass for the ReadWriteOnce volume, which defaults to using the default storageclass
+    # storageClass: "aws-efs"
+    storageRequest: 2Gi
+    # Configure the volumeName for the ReadWriteOnce volume if using a specific volume.
+    # If creation of the PersistentVolume is enabled, this volumeName will not be used.
+    # volumeName: "snorkelflow-jupyterhub-volume"
+    persistentVolume:
+      # Enable creation of the PersistentVolume associated with the PersistentVolumeClaim
+      enabled: false
+      driver: {}
+        # Spec for the driver of the PersistentVolume.
+        # csi:
+        #   driver: efs.csi.aws.com
+        #   volumeAttributes:
+        #     encryptInTransit: "true"
+        #   volumeHandle: fs-49874590::fsap-349874597490
+authentication:
+  oidc:
+    # Configure OIDC parameters for SSO
+    enabled: false
+    admissionRolesSettings: {}
+      # admissionRoles: role1,role2,role3
+    oidcProviderSettings: {}
+      # clientId:
+      # clientSecret:
+      # redirectUris:
+      # issuer:
+      # authorizationEndpoint:
+      # tokenEndpoint:
+      # userinfoEndpoint:
+      # jwksUri:
+      # userinfoHandler:
+      # resourceId:
+      # userinfoUid:
+    ssoSettings: {}
+      # ssoEnabled: "true"
+      # ssoRequired: "false"
+      # ssoType: OIDC

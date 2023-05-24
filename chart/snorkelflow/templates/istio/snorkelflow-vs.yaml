@@ -1,0 +1,29 @@
+{{- if .Values.traffic.istio.enabled }}
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: snorkelflow-vs
+  namespace: {{ .Values.namespace }}
+{{- if .Values.traffic.ingresses.services.snorkelflow.annotations }}
+  annotations:
+{{ toYaml .Values.traffic.ingresses.services.snorkelflow.annotations | indent 4 }}
+{{- end }}
+spec:
+  gateways:
+{{- if .Values.traffic.istio.gateway.create }}
+  - {{ .Values.namespace }}/{{ .Values.namespace }}-gateway
+{{- else }}
+  - {{ .Values.traffic.istio.gateway.namespace }}/{{ .Values.traffic.istio.gateway.name }}
+{{- end }}
+  hosts:
+  - {{ .Values.traffic.ingresses.services.snorkelflow.urlPrefix }}.{{ .Values.traffic.ingresses.domain }}
+  http:
+  - match:
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        host: envoy-front-proxy
+        port:
+          number: 1080
+{{- end }}

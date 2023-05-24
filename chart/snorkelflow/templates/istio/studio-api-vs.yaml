@@ -1,0 +1,29 @@
+{{- if and .Values.traffic.istio.enabled .Values.traffic.ingresses.services.studio.enabled }}
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: {{ .Values.namespace }}-studio-api-vs
+  namespace: {{ .Values.namespace }}
+{{- if .Values.traffic.ingresses.services.studio.annotations }}
+  annotations:
+{{ toYaml .Values.traffic.ingresses.services.studio.annotations | indent 4 }}
+{{- end }}
+spec:
+  gateways:
+{{- if .Values.traffic.istio.gateway.create }}
+  - {{ .Values.namespace }}/{{ .Values.namespace }}-gateway
+{{- else }}
+  - {{ .Values.traffic.istio.gateway.namespace }}/{{ .Values.traffic.istio.gateway.name }}
+{{- end }}
+  hosts:
+  - {{ .Values.traffic.ingresses.services.studio.urlPrefix }}.{{ .Values.traffic.ingresses.domain }}
+  http:
+  - match:
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        host: studio-api
+        port:
+          number: 8484
+{{- end }}

@@ -1,0 +1,25 @@
+{{- if .Values.services.jupyterhub.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.namespace }}-jupyterhub
+  namespace: {{ .Values.namespace }}
+{{- if .Values.volumes.jupyterhub.storageClass }}
+  annotations:
+    volume.beta.kubernetes.io/storage-class: "{{ .Values.volumes.jupyterhub.storageClass }}"
+{{- end }}
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.volumes.jupyterhub.storageRequest }}
+{{- if .Values.volumes.jupyterhub.storageClass }}
+  storageClassName: {{ .Values.volumes.jupyterhub.storageClass }}
+{{- end }}
+{{- end }}
+{{- if .Values.volumes.jupyterhub.persistentVolume.enabled }}
+  volumeName: {{ .Values.namespace }}-jupyterhub-pv
+{{- else if .Values.volumes.jupyterhub.volumeName }}
+  volumeName: {{ .Values.volumes.jupyterhub.volumeName }}
+{{- end }}
