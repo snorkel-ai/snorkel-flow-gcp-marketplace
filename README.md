@@ -14,7 +14,7 @@ For more information, visit our [official website](snorkel.ai)
 Get up and running with a few clicks! Install Snorkel Flow on your Google Kubernetes Enginer cluster using Google Cloud Marketplace. Follow the [on-screen instructions](TODO:Add Listing).
 
 ## Cluster Requirements
-6 nodes, minimum 32 CPU / 128GB RAM per node.
+4 nodes, minimum 32 CPU / 128GB RAM per node.
 
 ## Command line instructions
 ### Set up command-line tools
@@ -122,29 +122,34 @@ Use `helm install` to install Snorkel Flow from the helm charts.
 Note that you will need to insert the correct image paths in the `values.yaml`
 file, or set them on the command line as shown here.
 
-Also remember to toggle the RBAC creation for the secrets manager on, as by default all RBAC
+We will also toggle the RBAC creation for the secrets manager on, as by default all RBAC
 creation is disabled in our charts due to a [requirement](https://github.com/GoogleCloudPlatform/marketplace-k8s-app-tools/blob/master/docs/building-deployer-helm.md#declare-rbac-requirements-and-disable-rbac-in-the-chart) in the deployer image.
+
+Finally, we need to override the default storageclass to use the one provided by the Filestore CSI driver.
 
 ```shell
 cd chart/snorkelflow
 
 helm install --generate-name \
-  --set image.imageNames.postgres="gcr.io/snorkelai-public/snorkelflow/postgres:0.76.11" \
-  --set image.imageNames.engine="gcr.io/snorkelai-public/snorkelflow/engine:0.76.11" \
-  --set image.imageNames.envoy="gcr.io/snorkelai-public/snorkelflow/envoy:0.76.11" \
-  --set image.imageNames.flowUi="gcr.io/snorkelai-public/snorkelflow/flow-ui:0.76.11" \
-  --set image.imageNames.grafana="gcr.io/snorkelai-public/snorkelflow/grafana:0.76.11" \
-  --set image.imageNames.influxdb="gcr.io/snorkelai-public/snorkelflow/influxdb:0.76.11" \
-  --set image.imageNames.minio="gcr.io/snorkelai-public/snorkelflow/minio:0.76.11" \
-  --set image.imageNames.modelRegistry="gcr.io/snorkelai-public/snorkelflow/model-registry:0.76.11" \
-  --set image.imageNames.notebook="gcr.io/snorkelai-public/snorkelflow/notebook:0.76.11" \
-  --set image.imageNames.redis="gcr.io/snorkelai-public/snorkelflow/redis:0.76.11" \
-  --set image.imageNames.secretsGenerator="gcr.io/snorkelai-public/snorkelflow/secrets-generator:0.76.11" \
-  --set image.imageNames.singleuserNotebook="gcr.io/snorkelai-public/snorkelflow/singleuser-notebook:0.76.11" \
-  --set image.imageNames.studio="gcr.io/snorkelai-public/snorkelflow/studio-api:0.76.11" \
-  --set image.imageNames.telegraf="gcr.io/snorkelai-public/snorkelflow/telegraf:0.76.11" \
-  --set image.imageNames.tdm="gcr.io/snorkelai-public/snorkelflow/tdm-api:0.76.11" \
+  --set image.imageNames.postgres="gcr.io/snorkelai-public/snorkelflow/postgres:0.76.12" \
+  --set image.imageNames.engine="gcr.io/snorkelai-public/snorkelflow/engine:0.76.12" \
+  --set image.imageNames.envoy="gcr.io/snorkelai-public/snorkelflow/envoy:0.76.12" \
+  --set image.imageNames.flowUi="gcr.io/snorkelai-public/snorkelflow/flow-ui:0.76.12" \
+  --set image.imageNames.grafana="gcr.io/snorkelai-public/snorkelflow/grafana:0.76.12" \
+  --set image.imageNames.influxdb="gcr.io/snorkelai-public/snorkelflow/influxdb:0.76.12" \
+  --set image.imageNames.minio="gcr.io/snorkelai-public/snorkelflow/minio:0.76.12" \
+  --set image.imageNames.modelRegistry="gcr.io/snorkelai-public/snorkelflow/model-registry:0.76.12" \
+  --set image.imageNames.notebook="gcr.io/snorkelai-public/snorkelflow/notebook:0.76.12" \
+  --set image.imageNames.redis="gcr.io/snorkelai-public/snorkelflow/redis:0.76.12" \
+  --set image.imageNames.secretsGenerator="gcr.io/snorkelai-public/snorkelflow/secrets-generator:0.76.12" \
+  --set image.imageNames.singleuserNotebook="gcr.io/snorkelai-public/snorkelflow/singleuser-notebook:0.76.12" \
+  --set image.imageNames.studio="gcr.io/snorkelai-public/snorkelflow/studio-api:0.76.12" \
+  --set image.imageNames.telegraf="gcr.io/snorkelai-public/snorkelflow/telegraf:0.76.12" \
+  --set image.imageNames.tdm="gcr.io/snorkelai-public/snorkelflow/tdm-api:0.76.12" \
   --set services.secretsGenerator.createRole=true \
+  --set namespace="$NAMESPACE" \
+  --set volumes.snorkelflowData.storageClass="standard-rwx" \
+  --set volumes.snorkelflowData.storageRequest="1200Gi" \
   ./ 
 ```
 
@@ -203,8 +208,7 @@ Upload the license provided to you and follow the instructions on screen to crea
 This installation of Snorkel Flow is not meant to be scaled up.
 
 # Upgrading the app
-The image references in each pod can be set to the latest tag.
-Contact google@snorkel.ai for more information.
+To upgrade to a new version please redeploy from Marketplace.  For help, contact google@snorkel.ai.
 
 # Backup and Restore
 The Snorkel Flow data volumes are stored on `PersistentVolume` objects, in order to view these, run

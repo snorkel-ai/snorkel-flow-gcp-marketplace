@@ -48,7 +48,6 @@ traffic:
   # Configure urls and domain. Snorkel Flow urls will be {urls.service}.{domain}
   # e.g. snorkelflow.snorkel-ai.com
   ingresses:
-    domain: snorkel-ai.com
     # The ServiceType for services that require an ingress (e.g. ClusterIP, NodePort)
     # https://kubernetes.io/docs/concepts/services-networking/service/
     serviceType: ClusterIP

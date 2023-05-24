@@ -9,10 +9,10 @@ x-google-marketplace:
     releaseNote: 'Snorkel Flow GCP Marketplace Deployer'
   clusterConstraints:
     resources:
-    - replicas: 6
+    - replicas: 4
       requests:
-        cpu: 16
-        memory: 64Gi
+        cpu: 32
+        memory: 128Gi
   images:
     postgres:
       properties:
@@ -121,6 +121,9 @@ properties:
           - apiGroups: [""]
             resources: ["secrets"]
             verbs: ["get", "watch", "list", "create"]
+  traffic.ingresses.domain:
+    type: string
+  
 
 required:
 - name
