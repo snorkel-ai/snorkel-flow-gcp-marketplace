@@ -48,8 +48,7 @@ traffic:
   # Configure urls and domain. Snorkel Flow urls will be {urls.service}.{domain}
   # e.g. snorkelflow.snorkel-ai.com
   ingresses:
-
-    domain: snorkel.ai
+    domain: snorkel-ai.com
     # The ServiceType for services that require an ingress (e.g. ClusterIP, NodePort)
     # https://kubernetes.io/docs/concepts/services-networking/service/
     serviceType: ClusterIP
@@ -118,6 +117,9 @@ gpu:
     #     value: "true"
     # node_selectors:
     #   GPU: "true"
+namespace:
+  # Include namespace creation
+  enabled: true
 services:
   jupyterhub:
     # Enable the in-platform notebook
@@ -145,11 +147,6 @@ services:
     # Define non-default resource limits & requests
     resources: {}
     max_replicas: 2  # this is the replica limit, the actual replica count is set to 0 when templating if pod_autoscaling is turned on
-    env: {}
-  rayGpuWorker:
-    # Define non-default resource limits & requests
-    resources: {}
-    max_replicas: 0  # this is the replica limit, the actual replica count is set to 0 when templating if pod_autoscaling is turned on
     env: {}
   studioApi:
     # Define non-default resource limits & requests
@@ -191,6 +188,9 @@ volumes:
     # Configure the storageclass for the ReadWriteOnce volume, which defaults to using the default storageclass
     # storageClass: "aws-efs"
     storageRequest: 10Gi
+    # Configure the volumeName for the ReadWriteOnce volume if using a specific volume.
+    # If creation of the PersistentVolume is enabled, this volumeName will not be used.
+    # volumeName: "snorkelflow-influxdb-volume"
     persistentVolume:
       # Enable creation of the PersistentVolume associated with the PersistentVolumeClaim
       enabled: false
@@ -222,6 +222,9 @@ volumes:
     # Configure the storageclass for the ReadWriteOnce volume, which defaults to using the default storageclass
     # storageClass: "aws-efs"
     storageRequest: 10Gi
+    # Configure the volumeName for the ReadWriteOnce volume if using a specific volume.
+    # If creation of the PersistentVolume is enabled, this volumeName will not be used.
+    # volumeName: "snorkelflow-redis-volume"
     persistentVolume:
       # Enable creation of the PersistentVolume associated with the PersistentVolumeClaim
       enabled: false
@@ -236,6 +239,9 @@ volumes:
     # Configure the storageclass for the ReadWriteOnce volume, which defaults to using the default storageclass
     # storageClass: "aws-efs"
     storageRequest: 2Gi
+    # Configure the volumeName for the ReadWriteOnce volume if using a specific volume.
+    # If creation of the PersistentVolume is enabled, this volumeName will not be used.
+    # volumeName: "snorkelflow-jupyterhub-volume"
     persistentVolume:
       # Enable creation of the PersistentVolume associated with the PersistentVolumeClaim
       enabled: false
