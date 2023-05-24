@@ -1,7 +1,0 @@
-{{- if .Values.services.jupyterhub.enabled }}
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: snorkelflow-internal-k8s-ro-sa
-  namespace: {{ .Values.namespace }}
-{{- end }}
