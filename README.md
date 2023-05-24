@@ -196,7 +196,7 @@ Upload the license provided to you and follow the instructions on screen to crea
 This installation of Snorkel Flow is not meant to be scaled up.
 
 # Upgrading the app
-
+The image references in each pod can be set to the latest tag.
 
 # Backup and Restore
 The Snorkel Flow data volumes are stored on `PersistentVolume` objects, in order to view these, run
@@ -213,7 +213,9 @@ The other data volumes are created by the CSI driver.
 ## snorkelflow-data
 
 This can be done through both the Google Cloud Platform Console or through the CLI. 
+
 [Reference](https://cloud.google.com/sdk/gcloud/reference/filestore/backups/create)
+
 To backup through the CLI, first find the instance name of the volume. This will be in the form of
 `pvc-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`, the file share name will be the the string at the end of the 
 `VolumeHandle` when executing 
