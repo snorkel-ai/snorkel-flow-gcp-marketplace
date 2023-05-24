@@ -197,6 +197,7 @@ This installation of Snorkel Flow is not meant to be scaled up.
 
 # Upgrading the app
 The image references in each pod can be set to the latest tag.
+Contact google@snorkel.ai for more information.
 
 # Backup and Restore
 The Snorkel Flow data volumes are stored on `PersistentVolume` objects, in order to view these, run

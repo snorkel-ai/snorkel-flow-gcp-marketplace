@@ -127,6 +127,8 @@ services:
   secretsGenerator:
     # Enable the secrets generator job
     enabled: true
+    # Add flag to create RBAC, or not.
+    createRole: false
   # core
   flowUi:
      # Define non-default resource limits & requests
