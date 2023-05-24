@@ -119,6 +119,9 @@ Use `helm install` to install Snorkel Flow from the helm charts.
 Note that you will need to insert the correct image paths in the `values.yaml`
 file, or set them on the command line as shown here.
 
+Also remember to toggle the RBAC creation for the secrets manager on, as by default all RBAC
+creation is disabled in our charts due to a [requirement](https://github.com/GoogleCloudPlatform/marketplace-k8s-app-tools/blob/master/docs/building-deployer-helm.md#declare-rbac-requirements-and-disable-rbac-in-the-chart) in the deployer image.
+
 ```shell
 cd chart/snorkelflow
 
@@ -138,6 +141,7 @@ helm install --generate-name \
   --set image.imageNames.studio="gcr.io/snorkelai-public/snorkelflow/studio-api:0.76.11" \
   --set image.imageNames.telegraf="gcr.io/snorkelai-public/snorkelflow/telegraf:0.76.11" \
   --set image.imageNames.tdm="gcr.io/snorkelai-public/snorkelflow/tdm-api:0.76.11" \
+  --set services.secretsGenerator.createRole=true \
   ./ 
 ```
 
