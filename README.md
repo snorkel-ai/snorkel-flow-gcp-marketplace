@@ -196,7 +196,47 @@ Upload the license provided to you and follow the instructions on screen to crea
 This installation of Snorkel Flow is not meant to be scaled up.
 
 # Upgrading the app
-This installation of Snorkel Flow is not meant to be upgraded.
+
+
+# Backup and Restore
+The Snorkel Flow data volumes are stored on `PersistentVolume` objects, in order to view these, run
+
+```shell
+kubectl get pv --namespace {{ .Release.Namespace }}
+```
+
+The `snorkelflow-data` volume is created by the Google Filestore CSI driver, and it points to an automatically
+provisioned NFS
+
+The other data volumes are created by the CSI driver.
+
+## snorkelflow-data
+
+This can be done through both the Google Cloud Platform Console or through the CLI. 
+[Reference](https://cloud.google.com/sdk/gcloud/reference/filestore/backups/create)
+To backup through the CLI, first find the instance name of the volume. This will be in the form of
+`pvc-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`, the file share name will be the the string at the end of the 
+`VolumeHandle` when executing 
+
+```shell
+kubectl describe pv pvc-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx --namespace {{ .Release.Namespace }}
+```
+
+For example, the `VolumeHandle` could be `modeInstance/us-central1-c/pvc-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx/vol1`
+where the file share name will then be `vol1`
+
+Next, execute the following command, substituting in your specific file share and instance id.
+
+```shell
+gcloud filestore backups create my-backup --file-share=vol1 --instance=pvc-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx--instance-zone=us-central1-c --region=us-central1 --description="Backup"
+```
+
+Now in the [Backups](https://console.cloud.google.com/filestore/backups?project=snorkelai-public) console, we can restore this backup to the same Filestore instance.
+
+## Other volumes
+
+As the other volumes are provisioned by the Compute Engine persistent disk CSI driver, follow these [instructions](https://cloud.google.com/kubernetes-engine/docs/how-to/persistent-volumes/volume-snapshots#v1) in order to use Volume Snapshots to backup and restore the other persistent volumes.
+
 
 # Uninstalling the Application
 ## Using the Google Cloud Platform Console
