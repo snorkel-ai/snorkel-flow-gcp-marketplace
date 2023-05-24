@@ -13,6 +13,9 @@ For more information, visit our [official website](snorkel.ai)
 
 Get up and running with a few clicks! Install Snorkel Flow on your Google Kubernetes Enginer cluster using Google Cloud Marketplace. Follow the [on-screen instructions](TODO:Add Listing).
 
+## Cluster Requirements
+6 nodes, minimum 32 CPU / 128GB RAM per node.
+
 ## Command line instructions
 ### Set up command-line tools
 
