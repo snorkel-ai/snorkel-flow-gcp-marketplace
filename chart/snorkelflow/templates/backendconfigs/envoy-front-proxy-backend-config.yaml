@@ -6,7 +6,7 @@ metadata:
   name: envoy-front-proxy-backend-config
 spec:
   healthCheck:
-    checkIntervalSec: 15
+    checkIntervalSec: 90
     port: 1080
     type: HTTP
     requestPath: /api/version
