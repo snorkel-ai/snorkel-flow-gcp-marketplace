@@ -50,7 +50,7 @@ traffic:
   ingresses:
     # The ServiceType for services that require an ingress (e.g. ClusterIP, NodePort)
     # https://kubernetes.io/docs/concepts/services-networking/service/
-    serviceType: ClusterIP
+    serviceType: NodePort
     # Specify the cloud provider the ingresses are for or leave blank otherwise.
     # Currently supported providers: gcp
     cloudProvider: gcp

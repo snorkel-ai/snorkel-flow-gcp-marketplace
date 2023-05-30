@@ -13,4 +13,8 @@ spec:
     targetPort: 2702
   selector:
     service: model-registry
+  {{ if .Values.enablePublicServiceAndIngress }}
+  type: NodePort
+  {{ else }}
   type: ClusterIP
+  {{ end }}

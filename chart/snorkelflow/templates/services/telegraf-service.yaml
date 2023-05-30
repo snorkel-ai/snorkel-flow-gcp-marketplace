@@ -7,7 +7,11 @@ metadata:
   name: telegraf
   namespace: {{ .Values.namespace }}
 spec:
+  {{ if .Values.enablePublicServiceAndIngress }}
+  type: NodePort
+  {{ else }}
   type: ClusterIP
+  {{ end }}
   ports:
   - name: "8125"
     port: 8125

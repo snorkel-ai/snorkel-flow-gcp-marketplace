@@ -123,6 +123,9 @@ properties:
             verbs: ["get", "watch", "list", "create"]
   traffic.ingresses.domain:
     type: string
+  enablePublicServiceAndIngress:
+    type: boolean
+    default: true
   
 
 required:

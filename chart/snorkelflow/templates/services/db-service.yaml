@@ -7,7 +7,11 @@ metadata:
   name: db
   namespace: {{ .Values.namespace }}
 spec:
+  {{ if .Values.enablePublicServiceAndIngress }}
+  type: NodePort
+  {{ else }}
   type: ClusterIP
+  {{ end }}
   ports:
   - name: "5432"
     port: 5432
