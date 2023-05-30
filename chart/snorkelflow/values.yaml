@@ -1,6 +1,6 @@
 # The project name is also the name of the Kubernetes namespace
 projectName: snorkelflow
-version: 0.76.12
+version: 0.76.27
 image:
   # Configure an imagePullSecret
   # imagePullSecret: regcred
