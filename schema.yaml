@@ -7,12 +7,6 @@ x-google-marketplace:
   publishedVersion: '0.76.27'
   publishedVersionMetadata:
     releaseNote: 'Snorkel Flow GCP Marketplace Deployer'
-  clusterConstraints:
-    resources:
-    - replicas: 4
-      requests:
-        cpu: 32
-        memory: 128Gi
   images:
     postgres:
       properties:
